@@ -238,11 +238,14 @@ class GeminiService:
         clarification_transcription = self.transcribe_audio(new_audio_bytes)
         
         # 2. Build the context history
+        items_evaluated = original_analysis.get('cross_reference', {}).get('items_evaluated', [])
+        items_str = ", ".join([item.get('checklist_mapped_item', 'Unknown') for item in items_evaluated])
+
         prior_context = (
             f"PREVIOUS ANALYSIS (Resulted in CLARIFY status):\n"
             f"Original Visual Analysis: {json.dumps(original_analysis.get('visual_analysis', {}))}\n"
             f"Original Audio Transcript: {original_analysis.get('audio_transcription', {}).get('full_text', '')}\n"
-            f"Cross-Reference Mapped Item: {original_analysis.get('cross_reference', {}).get('checklist_mapped_item', 'Unknown')}\n"
+            f"Cross-Reference Mapped Items: {items_str}\n"
             f"Clarification Question Asked: {original_analysis.get('cross_reference', {}).get('clarification_question', '')}\n"
         )
         
@@ -520,7 +523,7 @@ STEP 1 — MAP & GRADE:
     Fail = Insufficient data/image quality to make a determination
 
 STEP 2 — COMPARE: What did the operator say vs what the AI sees vs History?
-  - Do they agree or disagree?
+  - For each item, do they agree or disagree?
   - Does new visual show accelerated wear vs historical baseline?
   - REMEMBER: Dirt, dust, paint wear, surface rust, and minor cosmetic damage are NORMAL and GREEN.
 
@@ -532,7 +535,7 @@ STEP 3 — RESOLVE & STATUS:
   - DISAGREE (AI sees worse) -> Trust the AI, escalate grade, return CLARIFY with a specific question
   - AMBIGUOUS -> CLARIFY with a specific yes/no question
 
-Focus ONLY on the component present in the current clip."""
+Focus ONLY on the components present in the current clip. Evaluate every visible component independently."""
 
 AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
 
@@ -677,17 +680,27 @@ CROSSREF_SCHEMA = {
     "properties": {
         "final_status": {
             "type": "string",
-            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY", "INSUFFICIENT_DATA"]
+            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY"],
+            "description": "The overall status across all evaluated items. If any item fails, the overall status is FAIL."
         },
         "confidence": {"type": "number"},
-        "checklist_mapped_item": {"type": "string"},
-        "checklist_grade": {
-            "type": "string",
-            "enum": ["Green", "Yellow", "Red", "Fail"]
+        "items_evaluated": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "checklist_mapped_item": {"type": "string"},
+                    "checklist_grade": {
+                        "type": "string",
+                        "enum": ["Green", "Yellow", "Red", "None"]
+                    },
+                    "verdict_reasoning": {"type": "string"},
+                    "recommendation": {"type": "string"}
+                },
+                "required": ["checklist_mapped_item", "checklist_grade", "verdict_reasoning"]
+            }
         },
-        "verdict_reasoning": {"type": "string"},
         "clarification_question": {"type": "string"},
-        "recommendation": {"type": "string"},
         "chain_of_thought": {
             "type": "object",
             "properties": {
@@ -699,5 +712,5 @@ CROSSREF_SCHEMA = {
             "required": ["audio_says", "visual_shows", "comparison"]
         }
     },
-    "required": ["final_status", "confidence", "checklist_mapped_item", "checklist_grade", "verdict_reasoning", "chain_of_thought"]
+    "required": ["final_status", "confidence", "items_evaluated", "chain_of_thought"]
 }
