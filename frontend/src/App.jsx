@@ -31,10 +31,15 @@ const MOCK_RESULTS = [
     cross_reference: {
       final_status: 'MONITOR',
       confidence: 0.85,
-      checklist_mapped_item: '1.2 Bucket Cutting Edge, Tips, or Moldboard',
-      checklist_grade: 'Yellow',
-      verdict_reasoning: 'Both visual AI and operator audio confirm minor oil seepage at the tilt cylinder rod seal. Not safety-critical but requires monitoring.',
-      recommendation: 'Flag for next scheduled PM. Monitor seepage rate. Escalate if seepage increases before next PM.',
+      items_evaluated: [
+        {
+          checklist_mapped_item: '1.2 Bucket Cutting Edge, Tips, or Moldboard',
+          checklist_grade: 'Yellow',
+          verdict_reasoning: 'Both visual AI and operator audio confirm minor oil seepage at the tilt cylinder rod seal. Not safety-critical but requires monitoring.',
+          recommendation: 'Flag for next scheduled PM. Monitor seepage rate. Escalate if seepage increases before next PM.'
+        }
+      ],
+      clarification_question: '',
       chain_of_thought: {
         audio_says: 'Operator confirmed seeing oil around the seal area of the tilt cylinder.',
         visual_shows: 'AI vision detects minor surface scoring on the cylinder rod and small oil seepage around the rod seal.',
@@ -67,15 +72,26 @@ const MOCK_RESULTS = [
     cross_reference: {
       final_status: 'FAIL',
       confidence: 0.94,
-      checklist_mapped_item: '2.2 Engine Coolant Level',
-      checklist_grade: 'Red',
-      verdict_reasoning: 'Both visual analysis and operator report confirm critically low coolant with contamination. Immediate action required.',
-      recommendation: 'Do not start machine. Drain and inspect coolant system. Check for head gasket leak. Refill with correct CAT ELC coolant.',
+      items_evaluated: [
+        {
+          checklist_mapped_item: '2.2 Engine Coolant Level',
+          checklist_grade: 'Red',
+          verdict_reasoning: 'Both visual analysis and operator report confirm critically low coolant with contamination. Immediate action required.',
+          recommendation: 'Do not start machine. Drain and inspect coolant system. Check for head gasket leak. Refill with correct CAT ELC coolant.',
+        },
+        {
+          checklist_mapped_item: '2.4 Inspect Hoses for Cracks or Leaks',
+          checklist_grade: 'Green',
+          verdict_reasoning: 'Hoses appear to be in good condition despite the coolant leak nearby.',
+          recommendation: 'No immediate action required for hoses.',
+        }
+      ],
+      clarification_question: '',
       chain_of_thought: {
         audio_says: 'Operator reported coolant is very low and discolored.',
         visual_shows: 'AI vision confirms coolant below MIN line, white deposits at cap, and brownish discoloration.',
         comparison: 'AGREE — Both sources are fully consistent. Critical failure confirmed.',
-        checklist_mapping_reasoning: 'Maps directly to checklist item 2.2 Engine Coolant Level.'
+        checklist_mapping_reasoning: 'Maps directly to checklist item 2.2 Engine Coolant Level and evaluated hoses.'
       }
     }
   }
@@ -88,7 +104,7 @@ function App() {
   const [checklistReasoningState, setChecklistReasoningState] = useState({});
   const [notification, setNotification] = useState(null);
   const mockIndexRef = useRef(0);
-  
+
   // Phase 3: Clarification State
   const [isClarifying, setIsClarifying] = useState(false);
   const pendingInspectionId = useRef(null);
@@ -98,13 +114,13 @@ function App() {
     try {
       const result = await uploadInspection(frames, audioBlob);
       console.log('Upload result:', result);
-      
+
       if (result.inspection_id) {
         pendingInspectionId.current = result.inspection_id;
       }
-      
+
       handleUpdateResult(result);
-      
+
       // Auto-switch logic
       if (result.final_status === 'PASS') {
         setTimeout(() => setActiveTab('report'), 2000);
@@ -112,7 +128,7 @@ function App() {
         // Switch to report even on error so user can see the highlighted failed item/context
         setTimeout(() => setActiveTab('report'), 3000);
       }
-      
+
       return result;
     } catch (err) {
       console.error('Inspection failed:', err);
@@ -158,32 +174,60 @@ function App() {
     setLastResult(result);
 
     const crossRef = result?.cross_reference;
-    const finalStatus = result?.final_status;
-    const mappedItem = crossRef?.checklist_mapped_item;
+    const itemsEvaluated = crossRef?.items_evaluated || [];
+    const finalStatus = result?.final_status || 'UNCLEAR';
+    const hasError = crossRef?.error;
 
-    // 1. Update the checklist state
-    if (mappedItem && crossRef.checklist_grade && crossRef.checklist_grade !== "None") {
-      setChecklistState(prev => ({
-        ...prev,
-        [mappedItem]: crossRef.checklist_grade
-      }));
-      setChecklistReasoningState(prev => ({
-        ...prev,
-        [mappedItem]: crossRef
-      }));
+    // 1. Update the checklist state for multiple items
+    if (itemsEvaluated.length > 0) {
+      setChecklistState(prev => {
+        const nextState = { ...prev };
+        itemsEvaluated.forEach(item => {
+          if (item.checklist_mapped_item && item.checklist_grade && item.checklist_grade !== "None") {
+            nextState[item.checklist_mapped_item] = item.checklist_grade;
+          }
+        });
+        return nextState;
+      });
+
+      setChecklistReasoningState(prev => {
+        const nextReasoning = { ...prev };
+        itemsEvaluated.forEach(item => {
+          if (item.checklist_mapped_item && item.checklist_grade && item.checklist_grade !== "None") {
+            // Keep full crossRef context, but attach specific item details
+            nextReasoning[item.checklist_mapped_item] = {
+              ...item,
+              chain_of_thought: crossRef.chain_of_thought // share top-level chain_of_thought
+            };
+          }
+        });
+        return nextReasoning;
+      });
     }
 
-    // 2. Trigger Global Alert
-    const hasError = crossRef?.error;
+    // 2. Trigger Global Alert using the worst item
     if (finalStatus === 'FAIL' || finalStatus === 'CLARIFY' || finalStatus === 'MONITOR' || finalStatus === 'UNCLEAR' || hasError) {
+      // Find the most critical component mentioning the issue
+      let criticalComponent = result.visual_analysis?.component || 'Equipment Item';
+      let criticalMessage = 'Issue detected.';
+
+      if (itemsEvaluated.length > 0) {
+        const worstItem = itemsEvaluated.find(i => i.checklist_grade === 'Red')
+          || itemsEvaluated.find(i => i.checklist_grade === 'Yellow')
+          || itemsEvaluated[0];
+
+        criticalComponent = worstItem.checklist_mapped_item;
+        criticalMessage = worstItem.verdict_reasoning;
+      }
+
       setNotification({
         status: (finalStatus === 'UNCLEAR' || hasError) ? 'FAIL' : finalStatus,
-        component: mappedItem || result.visual_analysis?.component || 'Equipment Item',
-        message: finalStatus === 'CLARIFY' 
-          ? crossRef.clarification_question 
-          : hasError 
-            ? `AI Error: ${crossRef.error}` 
-            : crossRef.verdict_reasoning || result.wear_delta?.summary || 'Issue detected.'
+        component: criticalComponent,
+        message: finalStatus === 'CLARIFY'
+          ? crossRef.clarification_question
+          : hasError
+            ? `AI Error: ${crossRef.error}`
+            : criticalMessage
       });
     }
   };
@@ -201,8 +245,8 @@ function App() {
   return (
     <div className="app">
       {/* Global Alert */}
-      <AlertDropdown 
-        notification={notification} 
+      <AlertDropdown
+        notification={notification}
         onAction={handleAlertAction}
         onDismiss={() => setNotification(null)}
       />
@@ -210,7 +254,7 @@ function App() {
       {/* Tab content */}
       <div className="tab-content">
         {activeTab === 'record' && (
-          <CaptureZone 
+          <CaptureZone
             onInspectionComplete={isClarifying ? handleClarificationComplete : handleInspectionComplete}
             checklistState={checklistState}
           />

@@ -152,7 +152,7 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
                         const label = gradeLabels[grade];
                         const reasoning = checklistReasoningState[item];
                         const isExpanded = expandedItem === item;
-                        const isLatest = result?.cross_reference?.checklist_mapped_item === item;
+                        const isLatest = result?.cross_reference?.items_evaluated?.some(evalItem => evalItem.checklist_mapped_item === item);
 
                         return (
                             <div key={item} className={`pdf-list-item ${isLatest ? 'highlight' : ''} clickable-item`}>

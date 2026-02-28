@@ -146,22 +146,29 @@ def analyze():
 
         # 4. Persistence (Supermemory)
         try:
-            mapped_component = result.get("cross_reference", {}).get("checklist_mapped_item", "Unknown")
-            grade = result.get("cross_reference", {}).get("checklist_grade", "None")
-            notes = result.get("cross_reference", {}).get("verdict_reasoning", "")
+            items_evaluated = result.get("cross_reference", {}).get("items_evaluated", [])
             transcript = result.get("audio_transcription", {}).get("full_text", "")
             machine_id = data.get('machine_id', 'W8210127') if request.is_json else request.form.get('machine_id', 'W8210127')
             
-            memory.save_inspection(
-                inspection_id=inspection_id,
-                component=mapped_component,
-                grade=grade,
-                notes=notes,
-                raw_analysis=result.get("cross_reference", {}),
-                audio_transcript=transcript,
-                frames=frames[:1], # Save first frame for visual index
-                machine_id=machine_id
-            )
+            # Save each evaluated component to Supermemory separately
+            for idx, item in enumerate(items_evaluated):
+                mapped_component = item.get("checklist_mapped_item", "Unknown")
+                grade = item.get("checklist_grade", "None")
+                notes = item.get("verdict_reasoning", "")
+                
+                # Create a unique inspection ID per component for supermemory
+                component_inspection_id = f"{inspection_id}_{idx}"
+                
+                memory.save_inspection(
+                    inspection_id=component_inspection_id,
+                    component=mapped_component,
+                    grade=grade,
+                    notes=notes,
+                    raw_analysis=result.get("cross_reference", {}),
+                    audio_transcript=transcript,
+                    frames=frames[:1], # Save first frame for visual index
+                    machine_id=machine_id
+                )
         except Exception as e:
             print(f"[WARN] Supermemory persistence failed: {e}")
 
