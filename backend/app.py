@@ -12,8 +12,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Allow large uploads (50MB) — recordings with many base64 frames can be large
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+# Allow large uploads — recordings with many base64 frames can be large
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB total request
+app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024  # 100MB per form field (frames JSON)
 
 # Config
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
