@@ -50,90 +50,14 @@ const CAT_TA1_CHECKLIST = {
     ]
 };
 
-const MOCK_RESULTS = [
-    {
-        inspection_id: 'mock-001',
-        final_status: 'MONITOR',
-        visual_analysis: {
-            component: 'Bucket Tilt Cylinder',
-            preliminary_status: 'MONITOR',
-            confidence: 0.82,
-            condition_observations: ['Minor oil seepage around rod seal', 'Surface scoring on chrome rod', 'Early wear on seal lip'],
-            concerns: ['Seal degradation likely within next 200 hours', 'Hydraulic fluid loss if untreated'],
-            chain_of_thought: {
-                observations: 'The hydraulic cylinder rod shows minor scoring on the chrome surface with a small amount of oil seepage visible around the rod seal area. Chrome finish shows early-stage wear marks approximately 3-4 inches from the seal.',
-                component_identification: 'Bucket Tilt Cylinder — hydraulic actuator rod and seal assembly on a Caterpillar 982 Medium Wheel Loader.',
-                condition_assessment: 'Early-stage seal wear within acceptable monitoring range. Oil seepage is minimal but present, indicating attention needed at next service interval.',
-                conclusion: 'MONITOR — Minor hydraulic seal seepage detected. Component is functional but trending toward service requirement.'
-            }
-        },
-        audio_transcription: {
-            full_text: 'Looking at the tilt cylinder, I can see some oil around the seal, looks like it might be starting to seep a little bit.',
-            segments: [{ text: 'Looking at the tilt cylinder, I can see some oil around the seal', start_time: 0.0, end_time: 3.2 }],
-            components_mentioned: [{ name: 'tilt cylinder', timestamp: 1.2 }]
-        },
-        cross_reference: {
-            final_status: 'MONITOR',
-            confidence: 0.85,
-            checklist_mapped_item: '1.3 Bucket Tilt Cylinders and Hoses',
-            checklist_grade: 'Yellow',
-            verdict_reasoning: 'Both visual AI and operator audio confirm minor oil seepage at the tilt cylinder rod seal. Not safety-critical but requires monitoring and scheduled maintenance.',
-            recommendation: 'Flag for next scheduled PM. Monitor seepage rate. Escalate if seepage increases before next PM.',
-            chain_of_thought: {
-                audio_says: 'Operator confirmed seeing oil around the seal area of the tilt cylinder, consistent with early-stage seepage.',
-                visual_shows: 'AI vision detects minor surface scoring on the cylinder rod and small oil seepage around the rod seal. Chrome finish shows early wear.',
-                comparison: 'AGREE — Both operator and AI visual analysis are consistent. No disagreement.',
-                checklist_mapping_reasoning: 'Inspected component is the bucket tilt cylinder hydraulic rod and seal assembly, mapping directly to checklist item 1.3 Bucket Tilt Cylinders and Hoses.'
-            }
-        }
-    },
-    {
-        inspection_id: 'mock-002',
-        final_status: 'FAIL',
-        visual_analysis: {
-            component: 'Engine Coolant Reservoir',
-            preliminary_status: 'FAIL',
-            confidence: 0.94,
-            condition_observations: ['Coolant level critically low — below MIN mark', 'White residue deposits on reservoir cap and neck', 'Discoloration of coolant (brownish tinge)'],
-            concerns: ['Risk of engine overheating', 'Possible coolant contamination with oil'],
-            chain_of_thought: {
-                observations: 'Coolant reservoir is visibly below the minimum fill line. White mineral deposits around the cap suggest chronic low coolant and evaporation. The coolant visible through the translucent tank appears brownish rather than the expected green or orange.',
-                component_identification: 'Engine coolant reservoir / overflow tank on a Caterpillar 982 Medium Wheel Loader.',
-                condition_assessment: 'Critical finding. Coolant level is dangerously low with signs of contamination. Operating the machine risks severe engine damage.',
-                conclusion: 'FAIL — Critical coolant level deficiency with contamination indicators. Machine should not be operated until coolant is inspected and topped off.'
-            }
-        },
-        audio_transcription: {
-            full_text: "Coolant looks really low, I can barely see it. And there's some brown stuff in there, doesn't look right.",
-            segments: [{ text: "Coolant looks really low, I can barely see it", start_time: 0.0, end_time: 2.8 }],
-            components_mentioned: [{ name: 'coolant reservoir', timestamp: 0.5 }]
-        },
-        cross_reference: {
-            final_status: 'FAIL',
-            confidence: 0.94,
-            checklist_mapped_item: '2.2 Engine Coolant Level',
-            checklist_grade: 'Red',
-            verdict_reasoning: 'Both visual analysis and operator report confirm critically low coolant with contamination. Immediate action required — do not operate.',
-            recommendation: 'Do not start machine. Drain and inspect coolant system. Check for head gasket leak (oil-coolant mixing). Refill with correct CAT ELC coolant after resolving root cause.',
-            chain_of_thought: {
-                audio_says: "Operator reported coolant is very low and discolored, indicating they visually identified the same critical findings as the AI.",
-                visual_shows: 'AI vision confirms coolant below MIN line, white deposits at cap, and brownish discoloration suggesting oil contamination.',
-                comparison: 'AGREE — Both sources are fully consistent. Critical failure confirmed.',
-                checklist_mapping_reasoning: 'Inspected component is the engine coolant level/reservoir, mapping directly to checklist item 2.2 Engine Coolant Level.'
-            }
-        }
-    }
-];
-
-export function ReportView({ result, checklistState, onUpdateResult }) {
-    const [expandedSection, setExpandedSection] = useState('cot');
-    const [mockIndex, setMockIndex] = useState(0);
+export function ReportView({ result, checklistState, checklistReasoningState = {}, onInjectMock }) {
+    const [expandedItem, setExpandedItem] = useState(null);
 
     const gradeColors = {
         'Green': '#22c55e',
         'Yellow': '#f59e0b',
         'Red': '#ef4444',
-        'None': '#e5e7eb' // light gray
+        'None': '#e5e7eb'
     };
 
     const gradeLabels = {
@@ -150,22 +74,21 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
         None: Object.keys(CAT_TA1_CHECKLIST).reduce((acc, cat) => acc + CAT_TA1_CHECKLIST[cat].length, 0) - Object.keys(checklistState).length
     };
 
+    const handleItemClick = (item) => {
+        setExpandedItem(prev => prev === item ? null : item);
+    };
+
     return (
         <div className="pdf-container">
             {/* Dev Test Bar */}
-            <div className="test-bar">
-                <button
-                    className="test-btn"
-                    onClick={() => {
-                        const mock = MOCK_RESULTS[mockIndex % MOCK_RESULTS.length];
-                        setMockIndex(i => i + 1);
-                        onUpdateResult(mock);
-                    }}
-                >
-                    Inject Mock #{(mockIndex % MOCK_RESULTS.length) + 1} ({MOCK_RESULTS[mockIndex % MOCK_RESULTS.length].final_status})
-                </button>
-                <span className="test-label">DEV TEST</span>
-            </div>
+            {onInjectMock && (
+                <div className="test-bar">
+                    <button className="test-btn" onClick={onInjectMock}>
+                        Inject Mock Result
+                    </button>
+                    <span className="test-label">DEV TEST</span>
+                </div>
+            )}
 
             {/* PDF Header */}
             <div className="pdf-header">
@@ -227,22 +150,45 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
                         const grade = checklistState[item] || 'None';
                         const color = gradeColors[grade];
                         const label = gradeLabels[grade];
-
-                        // Check if this item is currently being analyzed
+                        const reasoning = checklistReasoningState[item];
+                        const isExpanded = expandedItem === item;
                         const isLatest = result?.cross_reference?.checklist_mapped_item === item;
 
                         return (
-                            <div key={item} className={`pdf-list-item ${isLatest ? 'highlight' : ''}`}>
-                                <div className="item-main">
+                            <div key={item} className={`pdf-list-item ${isLatest ? 'highlight' : ''} clickable-item`}>
+                                <div
+                                    className="item-main"
+                                    onClick={() => handleItemClick(item)}
+                                >
+                                    <span className="item-chevron">{isExpanded ? '▾' : '▸'}</span>
                                     <span className="item-dot" style={{ backgroundColor: color }}></span>
                                     <span className="item-text">{item}</span>
                                     <span className="item-status">{label}</span>
                                 </div>
-                                {isLatest && result.cross_reference.verdict_reasoning && (
+                                {isExpanded && (
                                     <div className="item-comment ai-reasoning">
-                                        <strong>AI REASONING:</strong> {result.cross_reference.verdict_reasoning}
-                                        {result.cross_reference.recommendation && (
-                                            <div><strong>ACTION:</strong> {result.cross_reference.recommendation}</div>
+                                        {reasoning ? (
+                                            <>
+                                                <div><strong>AI REASONING:</strong> {reasoning.verdict_reasoning}</div>
+                                                {reasoning.recommendation && (
+                                                    <div><strong>ACTION:</strong> {reasoning.recommendation}</div>
+                                                )}
+                                                {reasoning.chain_of_thought && (
+                                                    <div className="cot-inline">
+                                                        {reasoning.chain_of_thought.audio_says && (
+                                                            <div><strong>Audio:</strong> {reasoning.chain_of_thought.audio_says}</div>
+                                                        )}
+                                                        {reasoning.chain_of_thought.visual_shows && (
+                                                            <div><strong>Visual:</strong> {reasoning.chain_of_thought.visual_shows}</div>
+                                                        )}
+                                                        {reasoning.chain_of_thought.comparison && (
+                                                            <div><strong>Comparison:</strong> {reasoning.chain_of_thought.comparison}</div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <span style={{ color: '#999' }}>No inspection data for this item yet.</span>
                                         )}
                                     </div>
                                 )}
@@ -252,7 +198,7 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
                 </div>
             ))}
 
-            {/* Chain of Thought */}
+            {/* Chain of Thought — most recent full analysis */}
             {result && (result.visual_analysis?.chain_of_thought || result.cross_reference?.chain_of_thought) && (
                 <div className="cot-section">
                     <div className="pdf-section-header">AI Chain of Thought</div>

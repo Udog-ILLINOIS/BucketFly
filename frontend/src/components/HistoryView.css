@@ -1,3 +1,15 @@
+.history-date-select {
+    background: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-family: monospace;
+    border-radius: 4px;
+    outline: none;
+    flex: 1;
+}
+
 .history-view {
     display: flex;
     flex-direction: column;
@@ -122,17 +134,117 @@
     align-items: center;
     border-bottom: 1px solid #334155;
     padding-bottom: 0.5rem;
+    user-select: none;
 }
 
-.timeline-date {
-    color: #94a3b8;
-    font-size: 0.9rem;
+.timeline-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.timeline-time {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-family: monospace;
+}
+
+.timeline-component {
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.timeline-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .timeline-grade {
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1rem;
     text-transform: uppercase;
+}
+
+.timeline-chevron {
+    color: #475569;
+    font-size: 0.75rem;
+}
+
+.timeline-verdict {
+    font-size: 0.88rem;
+    color: #94a3b8;
+    line-height: 1.4;
+    padding: 0 2px;
+}
+
+.timeline-expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-top: 1px solid #334155;
+    padding-top: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.analysis-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.analysis-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+}
+
+.analysis-text {
+    font-size: 0.88rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+}
+
+.analysis-section {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #f59e0b;
+    margin-bottom: 4px;
+}
+
+.cot-row {
+    display: flex;
+    gap: 10px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    border-top: 1px solid #1e293b;
+    padding-top: 4px;
+}
+
+.cot-label {
+    width: 110px;
+    flex-shrink: 0;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.cot-text {
+    color: #cbd5e1;
+    flex: 1;
 }
 
 .timeline-body {
