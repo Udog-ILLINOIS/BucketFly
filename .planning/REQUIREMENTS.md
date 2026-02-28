@@ -28,8 +28,8 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 
 - [ ] **CLAR-01**: When AI status is CLARIFY, an alert notification drops down from top of screen
 - [ ] **CLAR-02**: Alert displays AI's question (e.g., "Is that rust or mud?")
-- [ ] **CLAR-03**: User records a follow-up video clip to clarify (voice response, no typing)
-- [ ] **CLAR-04**: AI re-analyzes with original + clarification context and updates status
+- [x] **CLAR-03**: User records a follow-up video clip to clarify (voice response, no typing)
+- [x] **CLAR-04**: AI re-analyzes with original + clarification context and updates status
 
 ### Checklist
 
@@ -113,8 +113,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-06 | Phase 3 | Complete |
 | CLAR-01 | Phase 2 | Pending |
 | CLAR-02 | Phase 2 | Pending |
-| CLAR-03 | Phase 2 | Pending |
-| CLAR-04 | Phase 2 | Pending |
+| CLAR-03 | Phase 2 | Complete |
+| CLAR-04 | Phase 2 | Complete |
 | LIST-01 | Phase 4 | Pending |
 | LIST-02 | Phase 4 | Pending |
 | LIST-03 | Phase 4 | Pending |
