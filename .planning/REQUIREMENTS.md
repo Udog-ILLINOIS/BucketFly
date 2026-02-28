@@ -26,8 +26,8 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 
 ### Clarification Flow
 
-- [ ] **CLAR-01**: When AI status is CLARIFY, an alert notification drops down from top of screen
-- [ ] **CLAR-02**: Alert displays AI's question (e.g., "Is that rust or mud?")
+- [x] **CLAR-01**: When AI status is CLARIFY, an alert notification drops down from top of screen
+- [x] **CLAR-02**: Alert displays AI's question (e.g., "Is that rust or mud?")
 - [x] **CLAR-03**: User records a follow-up video clip to clarify (voice response, no typing)
 - [x] **CLAR-04**: AI re-analyzes with original + clarification context and updates status
 
@@ -48,7 +48,7 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 
 - [ ] **UI-01**: Three-tab navigation: Record / Checklist / History
 - [ ] **UI-02**: High-contrast, glove-friendly design (large touch targets, minimal text)
-- [ ] **UI-03**: Processing animation shown during AI analysis (3-15 second wait)
+- [x] **UI-03**: Processing animation shown during AI analysis (3-15 second wait)
 - [ ] **UI-04**: Mobile-optimized responsive layout
 - [ ] **UI-05**: Chain-of-Thought reasoning visible to user (AI transparency)
 
@@ -111,8 +111,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-04 | Phase 3 | Complete |
 | AI-05 | Phase 3 | Complete |
 | AI-06 | Phase 3 | Complete |
-| CLAR-01 | Phase 2 | Pending |
-| CLAR-02 | Phase 2 | Pending |
+| CLAR-01 | Phase 2 | Complete |
+| CLAR-02 | Phase 2 | Complete |
 | CLAR-03 | Phase 2 | Complete |
 | CLAR-04 | Phase 2 | Complete |
 | LIST-01 | Phase 4 | Pending |
@@ -124,7 +124,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HIST-04 | Phase 3 | Pending |
 | UI-01 | Phase 4 | Pending |
 | UI-02 | Phase 1 | Pending |
-| UI-03 | Phase 2 | Pending |
+| UI-03 | Phase 2 | Complete |
 | UI-04 | Phase 1 | Pending |
 | UI-05 | Phase 2 | Pending |
 | DEMO-01 | Phase 5 | Pending |
