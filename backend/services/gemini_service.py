@@ -121,161 +121,6 @@ class GeminiService:
         return result
 
     # ──────────────────────────────────────────────
-    # CROSS-REFERENCE
-    # ──────────────────────────────────────────────
-
-    def cross_reference(self, visual_analysis: dict, audio_transcription: dict, frames_b64: list) -> dict:
-        """
-        Cross-reference visual analysis vs audio assessment. Returns final verdict.
-
-        Args:
-            visual_analysis: Output from analyze_frames()
-            audio_transcription: Output from transcribe_audio() or {} if no audio
-            frames_b64: Original base64 frames (top 3 used for context)
-
-        Returns:
-            Structured verdict dict with final_status, chain_of_thought, etc.
-        """
-        start = time.time()
-
-        visual_summary = (
-            f"VISUAL ANALYSIS:\n"
-            f"  Component: {visual_analysis.get('component', 'unknown')}\n"
-            f"  Preliminary status: {visual_analysis.get('preliminary_status', 'UNCLEAR')}\n"
-            f"  Observations: {', '.join(visual_analysis.get('condition_observations', []))}\n"
-            f"  Concerns: {', '.join(visual_analysis.get('concerns', []))}\n"
-            f"  Confidence: {visual_analysis.get('confidence', 0)}\n"
-            f"  AI reasoning: {visual_analysis.get('chain_of_thought', {}).get('conclusion', '')}"
-        )
-
-        audio_summary = (
-            f"OPERATOR'S SPOKEN ASSESSMENT:\n"
-            f"  Transcript: \"{audio_transcription.get('full_text', 'No audio provided')}\"\n"
-            f"  Components mentioned: {[c['name'] for c in audio_transcription.get('components_mentioned', [])]}"
-        )
-
-        parts = []
-
-        # Include top 3 key frames for model to re-examine
-        for frame_b64 in frames_b64[:3]:
-            raw = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
-            parts.append(types.Part.from_bytes(
-                data=base64.b64decode(raw), mime_type="image/jpeg"
-            ))
-
-        parts.append(visual_summary)
-        parts.append("\n\n")
-        parts.append(audio_summary)
-        parts.append("\n\n")
-        parts.append(CROSSREF_PROMPT)
-
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=parts,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=CROSSREF_SCHEMA,
-                temperature=0.1,
-            )
-        )
-
-        elapsed = round(time.time() - start, 2)
-
-        try:
-            result = json.loads(response.text)
-        except json.JSONDecodeError:
-            result = {"raw_response": response.text, "parse_error": True,
-                      "final_status": "UNCLEAR"}
-
-        result["processing_time_seconds"] = elapsed
-        return result
-
-    # ──────────────────────────────────────────────
-    # CLARIFICATION RE-ANALYSIS
-    # ──────────────────────────────────────────────
-
-    def clarify_with_context(
-        self,
-        original_frames_b64: list,
-        original_analysis: dict,
-        clarification_audio_bytes: bytes,
-    ) -> dict:
-        """
-        Re-analyze with clarification audio. Returns definitive final status.
-
-        Uses Gemini multi-turn contents array to pass:
-          Turn 1 (user): top 5 original frames + original inspection context as text
-          Turn 2 (model): prior CLARIFY verdict summary
-          Turn 3 (user): clarification audio + instruction to finalize
-
-        Args:
-            original_frames_b64: List of base64 strings (already without data: prefix — loaded from disk)
-            original_analysis: cross_reference dict from prior /api/analyze call
-            clarification_audio_bytes: Raw bytes of follow-up recording
-
-        Returns:
-            Structured verdict dict (same shape as CROSSREF_SCHEMA), final_status != CLARIFY
-        """
-        start = time.time()
-
-        # Turn 1: Original inspection context (user role)
-        original_parts = []
-        for frame_b64 in original_frames_b64[:5]:
-            # Frames loaded from disk are raw base64 (no data: prefix)
-            original_parts.append(types.Part.from_bytes(
-                data=base64.b64decode(frame_b64), mime_type="image/jpeg"
-            ))
-        context_text = (
-            f"Original inspection context:\n"
-            f"Component: {original_analysis.get('component', 'unknown')}\n"
-            f"Prior status: {original_analysis.get('final_status', original_analysis.get('preliminary_status', 'UNCLEAR'))}\n"
-            f"Reasoning: {original_analysis.get('verdict_reasoning', original_analysis.get('chain_of_thought', {}).get('conclusion', ''))}\n"
-            f"What AI saw: {original_analysis.get('what_ai_sees', '')}\n"
-            f"What operator said: {original_analysis.get('what_operator_said', '')}"
-        )
-        original_parts.append(types.Part.from_text(context_text))
-
-        # Turn 2: AI's prior CLARIFY verdict (model role)
-        prior_verdict = (
-            f"I returned CLARIFY status because: "
-            f"{original_analysis.get('disagreement_reason', 'the condition was ambiguous')}. "
-            f"I asked: '{original_analysis.get('clarification_question', 'Please clarify the component condition')}'"
-        )
-
-        # Turn 3: Operator's clarification recording (user role)
-        clarification_parts = [
-            types.Part.from_bytes(data=clarification_audio_bytes, mime_type="audio/webm"),
-            types.Part.from_text(CLARIFY_PROMPT),
-        ]
-
-        contents = [
-            types.Content(role="user", parts=original_parts),
-            types.Content(role="model", parts=[types.Part.from_text(prior_verdict)]),
-            types.Content(role="user", parts=clarification_parts),
-        ]
-
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=CROSSREF_SCHEMA,
-                temperature=0.1,
-            )
-        )
-
-        elapsed = round(time.time() - start, 2)
-
-        try:
-            result = json.loads(response.text)
-        except json.JSONDecodeError:
-            result = {"raw_response": response.text, "parse_error": True,
-                      "final_status": "MONITOR"}
-
-        result["processing_time_seconds"] = elapsed
-        return result
-
-    # ──────────────────────────────────────────────
     # TIMESTAMP CORRELATION
     # ──────────────────────────────────────────────
 
@@ -345,59 +190,24 @@ STEP 4 — CONCLUDE: State your preliminary assessment. Use one of: PASS (accept
 
 Be thorough but concise. You are protecting the operator's safety."""
 
-CROSSREF_PROMPT = """You are a senior Caterpillar TA1 inspection verifier.
+AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
 
-    You have been provided:
-    1. A visual AI analysis of equipment frames (what the AI SEES)
-    2. The operator's spoken assessment (what the operator SAID)
-
-    Your job is to cross-reference these two sources and produce a final verdict.
-
-    STEP 1 — COMPARE: What did the operator say vs what the AI sees?
-      - Do they agree? (e.g., operator says "looks good", AI sees no defects → AGREE)
-      - Do they disagree? (e.g., operator says "looks good", AI sees hydraulic leak → DISAGREE)
-      - Is the operator's assessment incomplete? (missed something the AI caught)
-
-    STEP 2 — RESOLVE:
-      - AGREE + no concerns → PASS or MONITOR based on severity
-      - AGREE + serious concern → FAIL
-      - DISAGREE (AI sees worse than operator) → trust the AI, escalate status
-      - AMBIGUOUS or contradictory → CLARIFY (ask a specific yes/no question)
-      - No audio provided → rely solely on visual analysis
-
-    STEP 3 — CLARIFY conditions (use sparingly, only when genuinely unclear):
-      - Visual shows something that could be dirt OR damage
-      - Operator mentioned a different component than what AI sees
-      - Critical safety component with borderline condition
-
-    When returning CLARIFY, the clarification_question MUST be specific and answerable verbally:
-      GOOD: "Is that brown staining on the cylinder rod wet/oily or dry?"
-      BAD: "Can you clarify the condition?"
-
-    You are protecting operator safety. When in doubt, escalate."""
-
-CLARIFY_PROMPT = """The operator has recorded a follow-up clarification in response to your question.
-
-Listen carefully to their response and use it — combined with the original inspection frames and your prior analysis — to make a DEFINITIVE final assessment.
-
-IMPORTANT: You MUST return PASS, MONITOR, or FAIL.
-Do NOT return CLARIFY again — this is the operator's response to your clarification request.
-If the response is ambiguous, default to MONITOR (the safer choice).
-
-Update all fields to reflect your final verdict."""
-
-AUDIO_TRANSCRIPTION_PROMPT = """You are an audio transcription AI. Your ONLY job is to transcribe the spoken words in the actual audio file.
-
-CRITICAL INSTRUCTIONS:
-1. ONLY output words that you explicitly hear in the audio.
-2. DO NOT hallucinate, invent, or guess words, even if the audio is poor.
-3. If there is no human speech (e.g., just background noise or static), return an empty string for the text.
-4. DO NOT assume this is a Caterpillar inspection unless the speaker says those words.
+The inspector is speaking while examining a component. Transcribe their speech accurately.
 
 For each segment of speech:
-1. Provide the exact text spoken.
-2. Estimate the start and end timestamp in seconds.
-3. Only if a piece of equipment or component is explicitly mentioned in the audio, extract its name."""
+1. Provide the exact text spoken
+2. Estimate the start and end timestamp in seconds
+3. If a Caterpillar equipment component is mentioned, identify it using standard Cat terminology
+
+Common components to listen for:
+- Hydraulic cylinders, hoses, fittings
+- Bucket (cutting edge, teeth, side cutters)
+- Undercarriage (track shoes, rollers, idlers, sprockets)
+- Engine components (oil, coolant, belts, filters)
+- Structural members (boom, stick, frame)
+- Ground engaging tools (GET)
+
+Be precise with timestamps and exact with the spoken words. Use Caterpillar's standard terminology for component identification."""
 
 
 # ──────────────────────────────────────────────────────
@@ -465,35 +275,4 @@ AUDIO_SCHEMA = {
         }
     },
     "required": ["full_text", "segments", "components_mentioned"]
-}
-
-CROSSREF_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "final_status": {
-            "type": "string",
-            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY"]
-        },
-        "confidence": {"type": "number"},
-        "component": {"type": "string"},
-        "verdict_reasoning": {"type": "string"},
-        "disagreement_detected": {"type": "boolean"},
-        "disagreement_reason": {"type": "string"},
-        "clarification_question": {"type": "string"},
-        "what_ai_sees": {"type": "string"},
-        "what_operator_said": {"type": "string"},
-        "recommendation": {"type": "string"},
-        "chain_of_thought": {
-            "type": "object",
-            "properties": {
-                "audio_says": {"type": "string"},
-                "visual_shows": {"type": "string"},
-                "comparison": {"type": "string"},
-                "final_verdict": {"type": "string"}
-            },
-            "required": ["audio_says", "visual_shows", "comparison", "final_verdict"]
-        }
-    },
-    "required": ["final_status", "confidence", "component", "verdict_reasoning",
-                 "disagreement_detected", "chain_of_thought", "recommendation"]
 }

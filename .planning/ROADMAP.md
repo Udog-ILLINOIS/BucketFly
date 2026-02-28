@@ -11,7 +11,7 @@
 |---|-------|------|--------------|
 | 1 | Foundation & Capture | ✅ Working video+audio capture on mobile web | CAPT-01–05, UI-02, UI-04 |
 | 2 | Input Parsing | ✅ Gemini analyzes frames (visual) and transcribes audio | AI-01, AI-02, AI-03 |
-| 3 | 3/3 | Complete   | 2026-02-28 |
+| 3 | AI Analysis & Results | Cross-reference visual + audio, produce structured verdict | AI-04, AI-05, AI-06, CLAR-01–04 |
 | 4 | Memory, History & UI | Supermemory integration, checklist, tabs, history view | HIST-01–04, LIST-01–03, UI-01, UI-03, UI-05 |
 | 5 | Demo Preparation | Three polished demo scenarios with rehearsal | DEMO-01–03 |
 
@@ -85,13 +85,6 @@
 
 **Requirements:** AI-04, AI-05, AI-06, CLAR-01, CLAR-02, CLAR-03, CLAR-04
 
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 03-01-PLAN.md — Backend cross-reference: GeminiService.cross_reference() + /api/analyze endpoint (COMPLETE)
-- [ ] 03-02-PLAN.md — Backend clarification: GeminiService.clarify_with_context() + /api/clarify endpoint
-- [ ] 03-03-PLAN.md — Frontend: AlertDropdown, processing overlay, App.jsx + ResultsView wiring
-
 **Success Criteria:**
 1. AI identifies the part from visual + audio context
 2. AI looks up history for the identified part
@@ -100,6 +93,14 @@ Plans:
 5. Clarification feedback loop: user records follow-up → AI re-analyzes with full context
 6. Result includes: what AI missed (if anything), status, and actionable recommendation
 7. Chain-of-thought reasoning is visible
+
+**Build order:**
+1. Engineer cross-reference prompt (audio says X, visual shows Y → analysis)
+2. Build `/api/analyze` endpoint combining visual + audio results
+3. Implement clarification detection (disagreement triggers)
+4. Create AlertDropdown component for CLARIFY status
+5. Build `/api/clarify` endpoint with context chaining
+6. Add processing animation during AI wait
 
 ---
 
@@ -166,4 +167,4 @@ Phase 5 (Demo Preparation) ─────────────────�
 
 ---
 *Roadmap created: 2026-02-27*
-*Last updated: 2026-02-28 — Phase 3 plans created (3 plans, 2 waves)*
+*Last updated: 2026-02-28 — realigned phases to match whiteboard pipeline*

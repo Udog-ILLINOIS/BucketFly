@@ -20,16 +20,16 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 - [ ] **AI-01**: Backend receives video+audio clip and sends to Gemini 2.0 for analysis
 - [ ] **AI-02**: Gemini transcribes user's spoken assessment (intent extraction)
 - [ ] **AI-03**: Gemini analyzes video frames for visual evidence of component condition
-- [x] **AI-04**: Gemini cross-references spoken assessment vs. visual evidence
-- [x] **AI-05**: Gemini returns structured JSON with: component, status, confidence, reasoning
-- [x] **AI-06**: Status system supports four states: PASS (green), MONITOR (yellow), FAIL (red), CLARIFY (orange)
+- [ ] **AI-04**: Gemini cross-references spoken assessment vs. visual evidence
+- [ ] **AI-05**: Gemini returns structured JSON with: component, status, confidence, reasoning
+- [ ] **AI-06**: Status system supports four states: PASS (green), MONITOR (yellow), FAIL (red), CLARIFY (orange)
 
 ### Clarification Flow
 
-- [x] **CLAR-01**: When AI status is CLARIFY, an alert notification drops down from top of screen
-- [x] **CLAR-02**: Alert displays AI's question (e.g., "Is that rust or mud?")
-- [x] **CLAR-03**: User records a follow-up video clip to clarify (voice response, no typing)
-- [x] **CLAR-04**: AI re-analyzes with original + clarification context and updates status
+- [ ] **CLAR-01**: When AI status is CLARIFY, an alert notification drops down from top of screen
+- [ ] **CLAR-02**: Alert displays AI's question (e.g., "Is that rust or mud?")
+- [ ] **CLAR-03**: User records a follow-up video clip to clarify (voice response, no typing)
+- [ ] **CLAR-04**: AI re-analyzes with original + clarification context and updates status
 
 ### Checklist
 
@@ -48,7 +48,7 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 
 - [ ] **UI-01**: Three-tab navigation: Record / Checklist / History
 - [ ] **UI-02**: High-contrast, glove-friendly design (large touch targets, minimal text)
-- [x] **UI-03**: Processing animation shown during AI analysis (3-15 second wait)
+- [ ] **UI-03**: Processing animation shown during AI analysis (3-15 second wait)
 - [ ] **UI-04**: Mobile-optimized responsive layout
 - [ ] **UI-05**: Chain-of-Thought reasoning visible to user (AI transparency)
 
@@ -108,13 +108,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-01 | Phase 2 | Pending |
 | AI-02 | Phase 2 | Pending |
 | AI-03 | Phase 2 | Pending |
-| AI-04 | Phase 3 | Complete |
-| AI-05 | Phase 3 | Complete |
-| AI-06 | Phase 3 | Complete |
-| CLAR-01 | Phase 2 | Complete |
-| CLAR-02 | Phase 2 | Complete |
-| CLAR-03 | Phase 2 | Complete |
-| CLAR-04 | Phase 2 | Complete |
+| AI-04 | Phase 2 | Pending |
+| AI-05 | Phase 2 | Pending |
+| AI-06 | Phase 2 | Pending |
+| CLAR-01 | Phase 2 | Pending |
+| CLAR-02 | Phase 2 | Pending |
+| CLAR-03 | Phase 2 | Pending |
+| CLAR-04 | Phase 2 | Pending |
 | LIST-01 | Phase 4 | Pending |
 | LIST-02 | Phase 4 | Pending |
 | LIST-03 | Phase 4 | Pending |
@@ -124,7 +124,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HIST-04 | Phase 3 | Pending |
 | UI-01 | Phase 4 | Pending |
 | UI-02 | Phase 1 | Pending |
-| UI-03 | Phase 2 | Complete |
+| UI-03 | Phase 2 | Pending |
 | UI-04 | Phase 1 | Pending |
 | UI-05 | Phase 2 | Pending |
 | DEMO-01 | Phase 5 | Pending |
