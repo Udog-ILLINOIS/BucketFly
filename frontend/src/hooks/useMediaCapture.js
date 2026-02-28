@@ -26,13 +26,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
     const hiddenVideoRef = useRef(null);
     const resolveStopRef = useRef(null);
 
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            stopAllStreams();
-        };
-    }, []);
-
     const stopAllStreams = useCallback(() => {
         if (frameIntervalRef.current) {
             clearInterval(frameIntervalRef.current);
@@ -47,6 +40,32 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             streamRef.current = null;
         }
     }, []);
+
+    const captureFrame = useCallback(() => {
+        const video = hiddenVideoRef.current;
+        if (!video || !canvasRef.current) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+        const canvas = canvasRef.current;
+        const maxWidth = 640;
+        const maxHeight = 480;
+        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const frameData = canvas.toDataURL('image/jpeg', 0.6);
+        framesRef.current.push(frameData);
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopAllStreams();
+        };
+    }, [stopAllStreams]);
 
     const attachStream = useCallback((videoElement) => {
         if (videoElement && streamRef.current) {
@@ -172,26 +191,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             setError(`Failed to start recording: ${err.message}`);
             setStatus('error');
         }
-    }, [frameInterval]);
-
-    const captureFrame = useCallback(() => {
-        const video = hiddenVideoRef.current;
-        if (!video || !canvasRef.current) return;
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-        const canvas = canvasRef.current;
-        const maxWidth = 640;
-        const maxHeight = 480;
-        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const frameData = canvas.toDataURL('image/jpeg', 0.6);
-        framesRef.current.push(frameData);
-    }, []);
+    }, [frameInterval, captureFrame]);
 
     const stopRecording = useCallback(() => {
         if (status !== 'recording') return Promise.resolve(null);
