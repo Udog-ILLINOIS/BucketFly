@@ -26,13 +26,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
     // Separate ref for the hidden video element used for frame capture
     const hiddenVideoRef = useRef(null);
 
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            stopAllStreams();
-        };
-    }, []);
-
     const stopAllStreams = useCallback(() => {
         if (frameIntervalRef.current) {
             clearInterval(frameIntervalRef.current);
@@ -51,6 +44,13 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         }
     }, []);
 
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopAllStreams();
+        };
+    }, [stopAllStreams]);
+
     /**
      * Attach stream to a video element. Call this from the component
      * via a ref callback when the <video> element mounts.
@@ -59,6 +59,27 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         if (videoElement && streamRef.current) {
             videoElement.srcObject = streamRef.current;
         }
+    }, []);
+
+    const captureFrame = useCallback(() => {
+        const video = hiddenVideoRef.current;
+        if (!video || !canvasRef.current) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+        const canvas = canvasRef.current;
+        // Cap at 640x480 for faster uploads while keeping enough detail for AI analysis
+        const maxWidth = 640;
+        const maxHeight = 480;
+        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Capture as JPEG with quality 0.7 (good enough for inspection)
+        const frameData = canvas.toDataURL('image/jpeg', 0.7);
+        framesRef.current.push(frameData);
     }, []);
 
     const startRecording = useCallback(async () => {
@@ -144,28 +165,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             }
             setStatus('error');
         }
-    }, [frameInterval]);
-
-    const captureFrame = useCallback(() => {
-        const video = hiddenVideoRef.current;
-        if (!video || !canvasRef.current) return;
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-        const canvas = canvasRef.current;
-        // Cap at 640x480 for faster uploads while keeping enough detail for AI analysis
-        const maxWidth = 640;
-        const maxHeight = 480;
-        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // Capture as JPEG with quality 0.7 (good enough for inspection)
-        const frameData = canvas.toDataURL('image/jpeg', 0.7);
-        framesRef.current.push(frameData);
-    }, []);
+    }, [frameInterval, captureFrame]);
 
     const stopRecording = useCallback(() => {
         if (status !== 'recording') return;

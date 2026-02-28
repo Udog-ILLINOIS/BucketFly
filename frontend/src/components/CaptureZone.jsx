@@ -15,8 +15,6 @@ import './CaptureZone.css';
 export function CaptureZone({ onInspectionComplete }) {
     const {
         status,
-        frames,
-        audioBlob,
         error,
         recordingTime,
         startRecording,
