@@ -20,9 +20,9 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 - [ ] **AI-01**: Backend receives video+audio clip and sends to Gemini 2.0 for analysis
 - [ ] **AI-02**: Gemini transcribes user's spoken assessment (intent extraction)
 - [ ] **AI-03**: Gemini analyzes video frames for visual evidence of component condition
-- [ ] **AI-04**: Gemini cross-references spoken assessment vs. visual evidence
-- [ ] **AI-05**: Gemini returns structured JSON with: component, status, confidence, reasoning
-- [ ] **AI-06**: Status system supports four states: PASS (green), MONITOR (yellow), FAIL (red), CLARIFY (orange)
+- [x] **AI-04**: Gemini cross-references spoken assessment vs. visual evidence
+- [x] **AI-05**: Gemini returns structured JSON with: component, status, confidence, reasoning
+- [x] **AI-06**: Status system supports four states: PASS (green), MONITOR (yellow), FAIL (red), CLARIFY (orange)
 
 ### Clarification Flow
 
@@ -108,9 +108,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-01 | Phase 2 | Pending |
 | AI-02 | Phase 2 | Pending |
 | AI-03 | Phase 2 | Pending |
-| AI-04 | Phase 2 | Pending |
-| AI-05 | Phase 2 | Pending |
-| AI-06 | Phase 2 | Pending |
+| AI-04 | Phase 3 | Complete |
+| AI-05 | Phase 3 | Complete |
+| AI-06 | Phase 3 | Complete |
 | CLAR-01 | Phase 2 | Pending |
 | CLAR-02 | Phase 2 | Pending |
 | CLAR-03 | Phase 2 | Pending |
