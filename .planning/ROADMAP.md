@@ -85,6 +85,13 @@
 
 **Requirements:** AI-04, AI-05, AI-06, CLAR-01, CLAR-02, CLAR-03, CLAR-04
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Backend cross-reference: GeminiService.cross_reference() + /api/analyze endpoint
+- [ ] 03-02-PLAN.md — Backend clarification: GeminiService.clarify_with_context() + /api/clarify endpoint
+- [ ] 03-03-PLAN.md — Frontend: AlertDropdown, processing overlay, App.jsx + ResultsView wiring
+
 **Success Criteria:**
 1. AI identifies the part from visual + audio context
 2. AI looks up history for the identified part
@@ -93,14 +100,6 @@
 5. Clarification feedback loop: user records follow-up → AI re-analyzes with full context
 6. Result includes: what AI missed (if anything), status, and actionable recommendation
 7. Chain-of-thought reasoning is visible
-
-**Build order:**
-1. Engineer cross-reference prompt (audio says X, visual shows Y → analysis)
-2. Build `/api/analyze` endpoint combining visual + audio results
-3. Implement clarification detection (disagreement triggers)
-4. Create AlertDropdown component for CLARIFY status
-5. Build `/api/clarify` endpoint with context chaining
-6. Add processing animation during AI wait
 
 ---
 
@@ -167,4 +166,4 @@ Phase 5 (Demo Preparation) ─────────────────�
 
 ---
 *Roadmap created: 2026-02-27*
-*Last updated: 2026-02-28 — realigned phases to match whiteboard pipeline*
+*Last updated: 2026-02-28 — Phase 3 plans created (3 plans, 2 waves)*
