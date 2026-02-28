@@ -97,7 +97,6 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
                     <p className="pdf-subtitle">Daily</p>
                 </div>
                 <div className="pdf-logos">
-                    <div className="logo-altorfer">ALTORFER</div>
                     <div className="logo-cat">CAT</div>
                 </div>
                 <div className="pdf-summary-dots">

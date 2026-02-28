@@ -170,7 +170,6 @@ export function HistoryView() {
                     <p className="pdf-subtitle">Daily — {selectedDate}</p>
                 </div>
                 <div className="pdf-logos">
-                    <div className="logo-altorfer">ALTORFER</div>
                     <div className="logo-cat">CAT</div>
                 </div>
                 <div className="pdf-summary-dots">
