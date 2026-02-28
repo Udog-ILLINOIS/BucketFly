@@ -150,6 +150,7 @@ def analyze():
             grade = result.get("cross_reference", {}).get("checklist_grade", "None")
             notes = result.get("cross_reference", {}).get("verdict_reasoning", "")
             transcript = result.get("audio_transcription", {}).get("full_text", "")
+            machine_id = data.get('machine_id', 'W8210127') if request.is_json else request.form.get('machine_id', 'W8210127')
             
             memory.save_inspection(
                 inspection_id=inspection_id,
@@ -158,7 +159,8 @@ def analyze():
                 notes=notes,
                 raw_analysis=result.get("cross_reference", {}),
                 audio_transcript=transcript,
-                frames=frames[:1] # Save first frame for visual index
+                frames=frames[:1], # Save first frame for visual index
+                machine_id=machine_id
             )
         except Exception as e:
             print(f"[WARN] Supermemory persistence failed: {e}")
@@ -281,16 +283,17 @@ def identify():
 def get_component_history():
     """
     Fetch history logs for a specific component from Supermemory.
-    Expects query param: ?component=X
+    Expects query param: ?component=X&machine_id=Y
     """
     component = request.args.get('component')
+    machine_id = request.args.get('machine_id', 'W8210127')
     if not component:
         return jsonify({"error": "Missing component parameter"}), 400
         
     try:
         from services.memory_service import memory
-        history = memory.get_history(component, limit=10)
-        return jsonify({"component": component, "history": history}), 200
+        history = memory.get_history(component, limit=10, machine_id=machine_id)
+        return jsonify({"component": component, "machine_id": machine_id, "history": history}), 200
     except Exception as e:
         print(f"[ERROR] History fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -298,9 +301,10 @@ def get_component_history():
 @app.route('/api/history/dates', methods=['GET'])
 def get_history_dates():
     """Return list of distinct dates that have inspection records."""
+    machine_id = request.args.get('machine_id', 'W8210127')
     try:
-        dates = memory.get_available_dates()
-        return jsonify({"dates": dates}), 200
+        dates = memory.get_available_dates(machine_id=machine_id)
+        return jsonify({"dates": dates, "machine_id": machine_id}), 200
     except Exception as e:
         print(f"[ERROR] Dates fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -310,14 +314,15 @@ def get_history_dates():
 def get_history_by_date():
     """
     Fetch all inspection records for a given date.
-    Expects query param: ?date=YYYY-MM-DD
+    Expects query param: ?date=YYYY-MM-DD&machine_id=Y
     """
     date_str = request.args.get('date')
+    machine_id = request.args.get('machine_id', 'W8210127')
     if not date_str:
         return jsonify({"error": "Missing date parameter"}), 400
     try:
-        records = memory.get_history_by_date(date_str)
-        return jsonify({"date": date_str, "records": records}), 200
+        records = memory.get_history_by_date(date_str, machine_id=machine_id)
+        return jsonify({"date": date_str, "machine_id": machine_id, "records": records}), 200
     except Exception as e:
         print(f"[ERROR] History by date failed: {e}")
         return jsonify({"error": str(e)}), 500
