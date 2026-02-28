@@ -48,29 +48,15 @@ export function CaptureZone({ onInspectionComplete }) {
         } else if (status === 'recording') {
             const result = stopRecording();
             if (result && onInspectionComplete) {
-                setUploadStatus('uploading');
-                setUploadMessage(`Uploading ${result.frames.length} frames...`);
-                try {
-                    await onInspectionComplete(result.frames, result.audioBlob);
-                    setUploadStatus('success');
-                    setUploadMessage(`Upload complete! ${result.frames.length} frames captured ✓`);
-                    setTimeout(() => {
-                        reset();
-                        setUploadStatus(null);
-                        setUploadMessage('');
-                    }, 3000);
-                } catch (err) {
+                // Call parent handler without awaiting to avoid double-blocking.
+                // App.jsx shows a global overlay.
+                onInspectionComplete(result.frames, result.audioBlob).catch(err => {
                     setUploadStatus('error');
                     setUploadMessage(`Upload failed: ${err.message}`);
-                }
+                });
+                reset();
             } else if (result) {
-                setUploadStatus('success');
-                setUploadMessage(`Captured ${result.frames.length} frames ✓`);
-                setTimeout(() => {
-                    reset();
-                    setUploadStatus(null);
-                    setUploadMessage('');
-                }, 3000);
+                reset();
             }
         } else if (status === 'done' && uploadStatus === 'error') {
             reset();

@@ -386,24 +386,18 @@ If the response is ambiguous, default to MONITOR (the safer choice).
 
 Update all fields to reflect your final verdict."""
 
-AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
+AUDIO_TRANSCRIPTION_PROMPT = """You are an audio transcription AI. Your ONLY job is to transcribe the spoken words in the actual audio file.
 
-The inspector is speaking while examining a component. Transcribe their speech accurately.
+CRITICAL INSTRUCTIONS:
+1. ONLY output words that you explicitly hear in the audio.
+2. DO NOT hallucinate, invent, or guess words, even if the audio is poor.
+3. If there is no human speech (e.g., just background noise or static), return an empty string for the text.
+4. DO NOT assume this is a Caterpillar inspection unless the speaker says those words.
 
 For each segment of speech:
-1. Provide the exact text spoken
-2. Estimate the start and end timestamp in seconds
-3. If a Caterpillar equipment component is mentioned, identify it using standard Cat terminology
-
-Common components to listen for:
-- Hydraulic cylinders, hoses, fittings
-- Bucket (cutting edge, teeth, side cutters)
-- Undercarriage (track shoes, rollers, idlers, sprockets)
-- Engine components (oil, coolant, belts, filters)
-- Structural members (boom, stick, frame)
-- Ground engaging tools (GET)
-
-Be precise with timestamps and exact with the spoken words. Use Caterpillar's standard terminology for component identification."""
+1. Provide the exact text spoken.
+2. Estimate the start and end timestamp in seconds.
+3. Only if a piece of equipment or component is explicitly mentioned in the audio, extract its name."""
 
 
 # ──────────────────────────────────────────────────────
