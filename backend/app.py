@@ -251,6 +251,15 @@ def analyze():
             print(f"[WARN] Cross-reference failed: {e}")
             result["cross_reference"] = {"error": str(e)}
             result["final_status"] = visual.get("preliminary_status", "UNCLEAR")
+            
+        # Step 4: Timestamp Correlation
+        try:
+            if audio_transcription and "components_mentioned" in audio_transcription:
+                correlation = gemini.correlate_timestamps(audio_transcription, frames)
+                result["timestamp_correlation"] = correlation
+        except Exception as e:
+            print(f"[WARN] Timestamp correlation failed: {e}")
+            result["timestamp_correlation"] = {"error": str(e)}
 
         print(f"[ANALYZE] {inspection_id}: {len(frames)} frames, "
               f"audio={'yes' if has_audio else 'no'}, "
