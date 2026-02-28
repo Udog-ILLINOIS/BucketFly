@@ -191,6 +191,91 @@ class GeminiService:
         return result
 
     # ──────────────────────────────────────────────
+    # CLARIFICATION RE-ANALYSIS
+    # ──────────────────────────────────────────────
+
+    def clarify_with_context(
+        self,
+        original_frames_b64: list,
+        original_analysis: dict,
+        clarification_audio_bytes: bytes,
+    ) -> dict:
+        """
+        Re-analyze with clarification audio. Returns definitive final status.
+
+        Uses Gemini multi-turn contents array to pass:
+          Turn 1 (user): top 5 original frames + original inspection context as text
+          Turn 2 (model): prior CLARIFY verdict summary
+          Turn 3 (user): clarification audio + instruction to finalize
+
+        Args:
+            original_frames_b64: List of base64 strings (already without data: prefix — loaded from disk)
+            original_analysis: cross_reference dict from prior /api/analyze call
+            clarification_audio_bytes: Raw bytes of follow-up recording
+
+        Returns:
+            Structured verdict dict (same shape as CROSSREF_SCHEMA), final_status != CLARIFY
+        """
+        start = time.time()
+
+        # Turn 1: Original inspection context (user role)
+        original_parts = []
+        for frame_b64 in original_frames_b64[:5]:
+            # Frames loaded from disk are raw base64 (no data: prefix)
+            original_parts.append(types.Part.from_bytes(
+                data=base64.b64decode(frame_b64), mime_type="image/jpeg"
+            ))
+        context_text = (
+            f"Original inspection context:\n"
+            f"Component: {original_analysis.get('component', 'unknown')}\n"
+            f"Prior status: {original_analysis.get('final_status', original_analysis.get('preliminary_status', 'UNCLEAR'))}\n"
+            f"Reasoning: {original_analysis.get('verdict_reasoning', original_analysis.get('chain_of_thought', {}).get('conclusion', ''))}\n"
+            f"What AI saw: {original_analysis.get('what_ai_sees', '')}\n"
+            f"What operator said: {original_analysis.get('what_operator_said', '')}"
+        )
+        original_parts.append(types.Part.from_text(context_text))
+
+        # Turn 2: AI's prior CLARIFY verdict (model role)
+        prior_verdict = (
+            f"I returned CLARIFY status because: "
+            f"{original_analysis.get('disagreement_reason', 'the condition was ambiguous')}. "
+            f"I asked: '{original_analysis.get('clarification_question', 'Please clarify the component condition')}'"
+        )
+
+        # Turn 3: Operator's clarification recording (user role)
+        clarification_parts = [
+            types.Part.from_bytes(data=clarification_audio_bytes, mime_type="audio/webm"),
+            types.Part.from_text(CLARIFY_PROMPT),
+        ]
+
+        contents = [
+            types.Content(role="user", parts=original_parts),
+            types.Content(role="model", parts=[types.Part.from_text(prior_verdict)]),
+            types.Content(role="user", parts=clarification_parts),
+        ]
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CROSSREF_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {"raw_response": response.text, "parse_error": True,
+                      "final_status": "MONITOR"}
+
+        result["processing_time_seconds"] = elapsed
+        return result
+
+    # ──────────────────────────────────────────────
     # TIMESTAMP CORRELATION
     # ──────────────────────────────────────────────
 
@@ -290,6 +375,16 @@ CROSSREF_PROMPT = """You are a senior Caterpillar TA1 inspection verifier.
       BAD: "Can you clarify the condition?"
 
     You are protecting operator safety. When in doubt, escalate."""
+
+CLARIFY_PROMPT = """The operator has recorded a follow-up clarification in response to your question.
+
+Listen carefully to their response and use it — combined with the original inspection frames and your prior analysis — to make a DEFINITIVE final assessment.
+
+IMPORTANT: You MUST return PASS, MONITOR, or FAIL.
+Do NOT return CLARIFY again — this is the operator's response to your clarification request.
+If the response is ambiguous, default to MONITOR (the safer choice).
+
+Update all fields to reflect your final verdict."""
 
 AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
 
