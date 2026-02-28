@@ -63,13 +63,40 @@ class MemoryService:
         """
         try:
             history = self._load_history()
-            
-            # Filter matches (simple substring or exact match for now)
             matches = [record for record in history if component_query.lower() in record.get("component", "").lower()]
-            
             return matches[:limit]
         except Exception as e:
             print(f"[ERROR] Failed to retrieve history for {component_query}: {e}")
+            return []
+
+    def get_available_dates(self) -> list:
+        """
+        Return a sorted list of distinct inspection dates (YYYY-MM-DD) descending.
+        """
+        try:
+            history = self._load_history()
+            dates = set()
+            for record in history:
+                iid = record.get("inspection_id", "")
+                if len(iid) >= 8 and iid[:8].isdigit():
+                    d = iid[:8]
+                    dates.add(f"{d[:4]}-{d[4:6]}-{d[6:8]}")
+            return sorted(dates, reverse=True)
+        except Exception as e:
+            print(f"[ERROR] Failed to get available dates: {e}")
+            return []
+
+    def get_history_by_date(self, date_str: str) -> list:
+        """
+        Return all inspections for a given date string (YYYY-MM-DD), newest first.
+        """
+        try:
+            history = self._load_history()
+            date_prefix = date_str.replace("-", "")  # YYYYMMDD
+            matches = [r for r in history if r.get("inspection_id", "").startswith(date_prefix)]
+            return matches
+        except Exception as e:
+            print(f"[ERROR] Failed to get history by date {date_str}: {e}")
             return []
 
 # Singleton instance

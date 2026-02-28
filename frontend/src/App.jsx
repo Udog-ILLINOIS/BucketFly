@@ -6,11 +6,88 @@ import { AlertDropdown } from './components/AlertDropdown'
 import { uploadInspection, sendClarification } from './services/api'
 import './App.css'
 
+const MOCK_RESULTS = [
+  {
+    inspection_id: 'mock-001',
+    final_status: 'MONITOR',
+    visual_analysis: {
+      component: 'Bucket Tilt Cylinder',
+      preliminary_status: 'MONITOR',
+      confidence: 0.82,
+      condition_observations: ['Minor oil seepage around rod seal', 'Surface scoring on chrome rod'],
+      concerns: ['Seal degradation likely within next 200 hours'],
+      chain_of_thought: {
+        observations: 'The hydraulic cylinder rod shows minor scoring on the chrome surface with a small amount of oil seepage visible around the rod seal area.',
+        component_identification: 'Bucket Tilt Cylinder — hydraulic actuator rod and seal assembly on a Caterpillar 982 Medium Wheel Loader.',
+        condition_assessment: 'Early-stage seal wear within acceptable monitoring range.',
+        conclusion: 'MONITOR — Minor hydraulic seal seepage detected. Component is functional but trending toward service requirement.'
+      }
+    },
+    audio_transcription: {
+      full_text: 'Looking at the tilt cylinder, I can see some oil around the seal, looks like it might be starting to seep a little bit.',
+      segments: [],
+      components_mentioned: [{ name: 'tilt cylinder', timestamp: 1.2 }]
+    },
+    cross_reference: {
+      final_status: 'MONITOR',
+      confidence: 0.85,
+      checklist_mapped_item: '1.2 Bucket Cutting Edge, Tips, or Moldboard',
+      checklist_grade: 'Yellow',
+      verdict_reasoning: 'Both visual AI and operator audio confirm minor oil seepage at the tilt cylinder rod seal. Not safety-critical but requires monitoring.',
+      recommendation: 'Flag for next scheduled PM. Monitor seepage rate. Escalate if seepage increases before next PM.',
+      chain_of_thought: {
+        audio_says: 'Operator confirmed seeing oil around the seal area of the tilt cylinder.',
+        visual_shows: 'AI vision detects minor surface scoring on the cylinder rod and small oil seepage around the rod seal.',
+        comparison: 'AGREE — Both operator and AI visual analysis are consistent.',
+        checklist_mapping_reasoning: 'Maps directly to checklist item 1.2 Bucket Cutting Edge, Tips, or Moldboard.'
+      }
+    }
+  },
+  {
+    inspection_id: 'mock-002',
+    final_status: 'FAIL',
+    visual_analysis: {
+      component: 'Engine Coolant Reservoir',
+      preliminary_status: 'FAIL',
+      confidence: 0.94,
+      condition_observations: ['Coolant level critically low — below MIN mark', 'White residue deposits', 'Discoloration (brownish tinge)'],
+      concerns: ['Risk of engine overheating', 'Possible coolant contamination with oil'],
+      chain_of_thought: {
+        observations: 'Coolant reservoir is visibly below the minimum fill line. White mineral deposits around the cap.',
+        component_identification: 'Engine coolant reservoir / overflow tank on a Caterpillar 982 Medium Wheel Loader.',
+        condition_assessment: 'Critical finding. Coolant level is dangerously low with signs of contamination.',
+        conclusion: 'FAIL — Critical coolant level deficiency. Machine should not be operated.'
+      }
+    },
+    audio_transcription: {
+      full_text: "Coolant looks really low, I can barely see it. And there's some brown stuff in there.",
+      segments: [],
+      components_mentioned: [{ name: 'coolant reservoir', timestamp: 0.5 }]
+    },
+    cross_reference: {
+      final_status: 'FAIL',
+      confidence: 0.94,
+      checklist_mapped_item: '2.2 Engine Coolant Level',
+      checklist_grade: 'Red',
+      verdict_reasoning: 'Both visual analysis and operator report confirm critically low coolant with contamination. Immediate action required.',
+      recommendation: 'Do not start machine. Drain and inspect coolant system. Check for head gasket leak. Refill with correct CAT ELC coolant.',
+      chain_of_thought: {
+        audio_says: 'Operator reported coolant is very low and discolored.',
+        visual_shows: 'AI vision confirms coolant below MIN line, white deposits at cap, and brownish discoloration.',
+        comparison: 'AGREE — Both sources are fully consistent. Critical failure confirmed.',
+        checklist_mapping_reasoning: 'Maps directly to checklist item 2.2 Engine Coolant Level.'
+      }
+    }
+  }
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState('record');
   const [lastResult, setLastResult] = useState(null);
   const [checklistState, setChecklistState] = useState({});
+  const [checklistReasoningState, setChecklistReasoningState] = useState({});
   const [notification, setNotification] = useState(null);
+  const mockIndexRef = useRef(0);
   
   // Phase 3: Clarification State
   const [isClarifying, setIsClarifying] = useState(false);
@@ -48,6 +125,13 @@ function App() {
     }
   };
 
+  const handleInjectMock = () => {
+    const mock = MOCK_RESULTS[mockIndexRef.current % MOCK_RESULTS.length];
+    mockIndexRef.current += 1;
+    handleUpdateResult(mock);
+    setActiveTab('report');
+  };
+
   const handleClarificationComplete = async (frames, audioBlob) => {
     const inspectionId = pendingInspectionId.current;
     if (!inspectionId) return;
@@ -82,6 +166,10 @@ function App() {
       setChecklistState(prev => ({
         ...prev,
         [mappedItem]: crossRef.checklist_grade
+      }));
+      setChecklistReasoningState(prev => ({
+        ...prev,
+        [mappedItem]: crossRef
       }));
     }
 
@@ -127,10 +215,11 @@ function App() {
           />
         )}
         {activeTab === 'report' && (
-          <ReportView 
-            result={lastResult} 
-            checklistState={checklistState} 
-            onUpdateResult={handleUpdateResult}
+          <ReportView
+            result={lastResult}
+            checklistState={checklistState}
+            checklistReasoningState={checklistReasoningState}
+            onInjectMock={handleInjectMock}
           />
         )}
         {activeTab === 'history' && (

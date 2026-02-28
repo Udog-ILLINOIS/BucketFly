@@ -77,3 +77,21 @@ export async function fetchHistory(component) {
     }
     return response.json();
 }
+
+export async function fetchHistoryDates() {
+    const response = await fetch(`${API_BASE}/api/history/dates`);
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch dates: ${response.status}`);
+    }
+    return response.json();
+}
+
+export async function fetchHistoryByDate(date) {
+    const response = await fetch(`${API_BASE}/api/history/by-date?date=${encodeURIComponent(date)}`);
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch history for ${date}: ${response.status}`);
+    }
+    return response.json();
+}

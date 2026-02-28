@@ -254,6 +254,34 @@ def get_component_history():
         print(f"[ERROR] History fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/history/dates', methods=['GET'])
+def get_history_dates():
+    """Return list of distinct dates that have inspection records."""
+    try:
+        dates = memory.get_available_dates()
+        return jsonify({"dates": dates}), 200
+    except Exception as e:
+        print(f"[ERROR] Dates fetch failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/history/by-date', methods=['GET'])
+def get_history_by_date():
+    """
+    Fetch all inspection records for a given date.
+    Expects query param: ?date=YYYY-MM-DD
+    """
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({"error": "Missing date parameter"}), 400
+    try:
+        records = memory.get_history_by_date(date_str)
+        return jsonify({"date": date_str, "records": records}), 200
+    except Exception as e:
+        print(f"[ERROR] History by date failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
