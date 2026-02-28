@@ -98,9 +98,11 @@ def analyze():
         try:
             visual = gemini.analyze_frames(frames)
             result["visual_analysis"] = visual
+            result["color_code"] = visual.get("color_code", "Fail")
         except Exception as e:
             print(f"[WARN] Visual analysis failed: {e}")
-            result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR"}
+            result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR", "color_code": "Fail"}
+            result["color_code"] = "Fail"
             visual = result["visual_analysis"]
 
         # Step 3b: Audio transcription (Gemini)
@@ -124,6 +126,9 @@ def analyze():
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
+            # Override color_code with the cross-reference grade (more authoritative)
+            result["color_code"] = cross_ref.get("checklist_grade",
+                visual.get("color_code", "Fail"))
 
             # Step 3d: Subjective Delta Review (Gemini)
             if previous_inspection:
