@@ -247,6 +247,49 @@ def clarify():
         print(f"[ERROR] Clarify failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/api/identify', methods=['POST'])
+def identify():
+    """
+    Lightweight real-time component identification from a single frame.
+    Used during recording to give the operator live feedback.
+
+    Accepts JSON: { "frame": "<base64 JPEG>" }
+    Returns: { component, checklist_item, confidence, confidence_label, guidance }
+    """
+    try:
+        data = request.get_json()
+        frame = data.get('frame')
+        checklist_state = data.get('checklist_state', {})
+
+        if not frame:
+            return jsonify({"error": "No frame provided"}), 400
+
+        gemini = get_gemini()
+        result = gemini.identify_component(frame)
+
+        # Enrich: check if this item was already inspected today
+        checklist_item = result.get('checklist_item', 'None')
+        if checklist_item and checklist_item != 'None' and checklist_item in checklist_state:
+            result['already_inspected'] = True
+            result['existing_grade'] = checklist_state[checklist_item]
+        else:
+            result['already_inspected'] = False
+            result['existing_grade'] = None
+
+        # Count remaining items
+        total_items = 35  # TA1 checklist total
+        inspected_count = len(checklist_state)
+        result['items_remaining'] = total_items - inspected_count
+        result['items_inspected'] = inspected_count
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"[ERROR] Identify failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/history', methods=['GET'])
 def get_component_history():
     """
