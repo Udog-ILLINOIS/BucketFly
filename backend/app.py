@@ -22,13 +22,13 @@ app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024  # 100MB per form field (
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Lazy-initialize Gemini service (avoids import errors if key not set)
+# Lazy-initialize services
 _gemini_service = None
 
 
 def get_gemini():
     global _gemini_service
-    if True:
+    if _gemini_service is None:
         from services.gemini_service import GeminiService
         _gemini_service = GeminiService()
     return _gemini_service
@@ -89,12 +89,12 @@ def analyze():
         # 3. AI Pipeline
         gemini = get_gemini()
         result = {
-            "inspection_id": inspection_id, 
+            "inspection_id": inspection_id,
             "frame_count": len(frames),
             "has_audio": has_audio
         }
 
-        # Step 3a: Visual analysis
+        # Step 3a: Visual analysis (Gemini)
         try:
             visual = gemini.analyze_frames(frames)
             result["visual_analysis"] = visual
@@ -103,7 +103,7 @@ def analyze():
             result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR"}
             visual = result["visual_analysis"]
 
-        # Step 3b: Audio transcription
+        # Step 3b: Audio transcription (Gemini)
         audio_transcription = {}
         if has_audio:
             try:
@@ -113,25 +113,23 @@ def analyze():
                 print(f"[WARN] Audio transcription failed: {e}")
                 result["audio_transcription"] = {"error": str(e), "full_text": ""}
 
-        # Step 3c: Cross-reference & History Lookup
+        # Step 3c: Cross-reference & History Lookup (Gemini)
         try:
-            # Query history from Supermemory (or mock)
             component_name = visual.get("component", "")
             history = memory.get_history(component_name) if component_name else []
-            
-            # Use the most recent entry for comparison
+
             previous_inspection = history[0] if history else None
-            
+
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
             result["cross_reference"] = cross_ref
-            result["final_status"] = cross_ref.get("final_status", 
+            result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
 
-            # Step 3d: Subjective Delta Review (Phase 1)
+            # Step 3d: Subjective Delta Review (Gemini)
             if previous_inspection:
                 try:
                     delta = gemini.review_delta(
-                        current_analysis=cross_ref, 
+                        current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {})
                     )
                     result["wear_delta"] = delta
@@ -214,7 +212,7 @@ def clarify():
                 with open(os.path.join(inspection_dir, file), 'rb') as f:
                     frames.append(base64.b64encode(f.read()).decode('utf-8'))
 
-        # Run clarification logic
+        # Transcribe + reason (Gemini)
         gemini = get_gemini()
         clarify_result = gemini.clarify_with_context(original_analysis, audio_data, frames)
         
@@ -334,6 +332,6 @@ if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
     print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.5-flash")
+    print("  Gemini: gemini-2.5-flash-lite")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)

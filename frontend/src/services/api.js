@@ -78,6 +78,7 @@ export async function fetchHistory(component) {
     return response.json();
 }
 
+
 /**
  * Send a single frame for lightweight real-time component identification.
  * Used during recording for live feedback overlay.
