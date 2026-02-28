@@ -1,0 +1,15 @@
+# Uploads directory (generated at runtime)
+backend/uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store

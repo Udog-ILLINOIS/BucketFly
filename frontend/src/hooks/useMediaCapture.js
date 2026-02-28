@@ -152,14 +152,18 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
         const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Cap at 640x480 for faster uploads while keeping enough detail for AI analysis
+        const maxWidth = 640;
+        const maxHeight = 480;
+        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
 
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Capture as JPEG with quality 0.8
-        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+        // Capture as JPEG with quality 0.7 (good enough for inspection)
+        const frameData = canvas.toDataURL('image/jpeg', 0.7);
         framesRef.current.push(frameData);
     }, []);
 
