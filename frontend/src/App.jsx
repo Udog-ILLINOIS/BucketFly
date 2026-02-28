@@ -9,36 +9,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('record');
   const [lastResult, setLastResult] = useState(null);
 
-  // Processing overlay state
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeElapsed, setAnalyzeElapsed] = useState(0);
-  const analyzeTimerRef = useRef(null);
-
   // Clarification mode state
   const [isClarifying, setIsClarifying] = useState(false);
   const pendingInspectionId = useRef(null);
 
-  // ── Helper: start/stop the elapsed timer ──────────────────────
-  const startTimer = () => {
-    setAnalyzeElapsed(0);
-    const startTime = Date.now();
-    analyzeTimerRef.current = setInterval(() => {
-      setAnalyzeElapsed(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-  };
-
-  const stopTimer = () => {
-    if (analyzeTimerRef.current) {
-      clearInterval(analyzeTimerRef.current);
-      analyzeTimerRef.current = null;
-    }
-  };
-
   // ── Normal inspection handler ─────────────────────────────────
   const handleInspectionComplete = async (frames, audioBlob) => {
     console.log(`[App] Analyzing ${frames.length} frames, audioBlob size: ${audioBlob?.size}`);
-    setIsAnalyzing(true);
-    startTimer();
 
     try {
       const result = await analyzeInspection(frames, audioBlob);
@@ -50,15 +27,12 @@ function App() {
         pendingInspectionId.current = result.inspection_id;
       }
 
-      // Switch to results immediately (no 2s delay)
-      setActiveTab('results');
+      // Give CaptureZone time to show the success mark before switching tabs
+      setTimeout(() => setActiveTab('results'), 2000);
       return result;
     } catch (err) {
       console.error('[App] Analysis failed:', err);
       throw err;
-    } finally {
-      stopTimer();
-      setIsAnalyzing(false);
     }
   };
 
@@ -77,8 +51,6 @@ function App() {
     }
 
     console.log(`[App] Submitting clarification for ${inspectionId}`);
-    setIsAnalyzing(true);
-    startTimer();
 
     try {
       const clarifyResponse = await submitClarification(inspectionId, audioBlob);
@@ -99,9 +71,6 @@ function App() {
       console.error('[App] Clarification failed:', err);
       setIsClarifying(false);
       throw err;
-    } finally {
-      stopTimer();
-      setIsAnalyzing(false);
     }
   };
 
@@ -112,7 +81,6 @@ function App() {
 
   const showClarifyAlert = finalStatus === 'CLARIFY'
     && !isClarifying
-    && !isAnalyzing
     && activeTab === 'results';
 
   const clarifyQuestion = lastResult?.cross_reference?.clarification_question
@@ -134,19 +102,8 @@ function App() {
         <AlertDropdown
           question={clarifyQuestion}
           onStartClarification={handleStartClarification}
-          onDismiss={() => {/* user dismissed without responding */}}
+          onDismiss={() => {/* user dismissed without responding */ }}
         />
-      )}
-
-      {/* Processing overlay — shown during AI analysis */}
-      {isAnalyzing && (
-        <div className="processing-overlay">
-          <div className="processing-spinner"></div>
-          <div className="processing-text">
-            {isClarifying ? 'Re-analyzing with clarification...' : 'AI analyzing inspection...'}
-          </div>
-          <div className="processing-elapsed">{analyzeElapsed}s</div>
-        </div>
       )}
 
       {/* Tab content */}
