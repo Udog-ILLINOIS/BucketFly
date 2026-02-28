@@ -24,7 +24,7 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY not set in .env")
 
         self.client = genai.Client(api_key=api_key)
-        self.model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+        self.model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
 
     # ──────────────────────────────────────────────
     # VISUAL ANALYSIS

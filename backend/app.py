@@ -361,7 +361,6 @@ def clarify():
 if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
-    print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.5-flash")
+    print("  Gemini: gemini-2.0-flash")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)
