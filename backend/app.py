@@ -24,7 +24,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Lazy-initialize services
 _gemini_service = None
-_claude_service = None
 
 
 def get_gemini():
@@ -33,14 +32,6 @@ def get_gemini():
         from services.gemini_service import GeminiService
         _gemini_service = GeminiService()
     return _gemini_service
-
-
-def get_claude():
-    global _claude_service
-    if _claude_service is None:
-        from services.claude_service import ClaudeService
-        _claude_service = ClaudeService()
-    return _claude_service
 
 
 @app.route('/api/health', methods=['GET'])
@@ -96,7 +87,6 @@ def analyze():
                 f.write(audio_data)
 
         # 3. AI Pipeline
-        claude = get_claude()
         gemini = get_gemini()
         result = {
             "inspection_id": inspection_id,
@@ -104,9 +94,9 @@ def analyze():
             "has_audio": has_audio
         }
 
-        # Step 3a: Visual analysis (Claude)
+        # Step 3a: Visual analysis (Gemini)
         try:
-            visual = claude.analyze_frames(frames)
+            visual = gemini.analyze_frames(frames)
             result["visual_analysis"] = visual
         except Exception as e:
             print(f"[WARN] Visual analysis failed: {e}")
@@ -123,22 +113,22 @@ def analyze():
                 print(f"[WARN] Audio transcription failed: {e}")
                 result["audio_transcription"] = {"error": str(e), "full_text": ""}
 
-        # Step 3c: Cross-reference & History Lookup (Claude)
+        # Step 3c: Cross-reference & History Lookup (Gemini)
         try:
             component_name = visual.get("component", "")
             history = memory.get_history(component_name) if component_name else []
 
             previous_inspection = history[0] if history else None
 
-            cross_ref = claude.cross_reference(visual, audio_transcription, frames, history)
+            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
 
-            # Step 3d: Subjective Delta Review (Claude)
+            # Step 3d: Subjective Delta Review (Gemini)
             if previous_inspection:
                 try:
-                    delta = claude.review_delta(
+                    delta = gemini.review_delta(
                         current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {})
                     )
@@ -220,12 +210,9 @@ def clarify():
                 with open(os.path.join(inspection_dir, file), 'rb') as f:
                     frames.append(base64.b64encode(f.read()).decode('utf-8'))
 
-        # Transcribe clarification audio (Gemini), then reason (Claude)
+        # Transcribe + reason (Gemini)
         gemini = get_gemini()
-        claude = get_claude()
-        clarification_transcription = gemini.transcribe_audio(audio_data, mime_type="audio/webm")
-        clarification_text = clarification_transcription.get("full_text", "")
-        clarify_result = claude.clarify_with_context(original_analysis, clarification_text, frames)
+        clarify_result = gemini.clarify_with_context(original_analysis, audio_data, frames)
         
         # Save clarification audio
         clarify_audio_path = os.path.join(inspection_dir, 'clarify_audio.webm')
@@ -340,6 +327,6 @@ if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
     print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.5-flash")
+    print("  Gemini: gemini-2.5-flash-lite")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)

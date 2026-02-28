@@ -1,11 +1,13 @@
 """
 Gemini AI Service — Cat Vision-Inspect
 
-Audio transcription only. Visual analysis and reasoning handled by claude_service.py.
+Handles all AI tasks: visual analysis, audio transcription, cross-reference reasoning,
+live component identification, and delta review using Gemini 1.5 Flash.
 """
 
 import os
 import json
+import base64
 import time
 from dotenv import load_dotenv
 
@@ -23,7 +25,58 @@ class GeminiService:
 
         self.client = genai.Client(api_key=api_key)
         self.model = 'gemini-2.5-flash-lite'
-        print(f'[GEMINI] Using model: {self.model} (audio only)')
+        print(f'[GEMINI] Using model: {self.model}')
+
+    # ──────────────────────────────────────────────
+    # VISUAL ANALYSIS
+    # ──────────────────────────────────────────────
+
+    def analyze_frames(self, frames_b64: list[str]) -> dict:
+        """
+        Analyze key frames from an equipment inspection.
+
+        Args:
+            frames_b64: List of base64-encoded JPEG images
+
+        Returns:
+            Structured analysis dict with CoT reasoning
+        """
+        start = time.time()
+
+        parts = []
+        for frame_b64 in frames_b64:
+            if ',' in frame_b64:
+                frame_b64 = frame_b64.split(',')[1]
+            parts.append(types.Part.from_bytes(
+                data=base64.b64decode(frame_b64), mime_type="image/jpeg"
+            ))
+
+        parts.append(VISUAL_ANALYSIS_PROMPT)
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=parts,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=VISUAL_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {"raw_response": response.text, "parse_error": True,
+                      "preliminary_status": "UNCLEAR"}
+
+        result["processing_time_seconds"] = elapsed
+        return result
+
+    # ──────────────────────────────────────────────
+    # AUDIO TRANSCRIPTION
+    # ──────────────────────────────────────────────
 
     def transcribe_audio(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> dict:
         """
@@ -338,8 +391,88 @@ class GeminiService:
         return result
 
 # ──────────────────────────────────────────────────────
-# PROMPT
+# PROMPTS
 # ──────────────────────────────────────────────────────
+
+VISUAL_ANALYSIS_PROMPT = """You are a senior Caterpillar field service engineer conducting a TA1 Daily Walkaround inspection on heavy equipment.
+
+Analyze the provided inspection frames using Chain of Thought reasoning.
+
+STEP 1 — OBSERVE: Describe exactly what you see in the frames. Note details like fluid stains, surface condition, wear patterns, cracks, corrosion, loose connections, fluid levels, and structural integrity.
+
+STEP 2 — IDENTIFY: Identify the specific equipment component being inspected. Use standard Caterpillar terminology (e.g., "hydraulic cylinder rod", "bucket cutting edge", "air filter element", "track shoe", "engine oil dipstick", "coolant reservoir").
+
+STEP 3 — ASSESS: Evaluate the component's condition based on Caterpillar maintenance standards. Consider: Is this within normal operating condition? Is there evidence of accelerated wear? Are there safety-critical findings?
+
+STEP 4 — CONCLUDE: State your preliminary assessment. Use one of: PASS (acceptable condition), MONITOR (minor concerns, track for next inspection), FAIL (safety-critical, needs immediate attention), or UNCLEAR (cannot determine from these frames).
+
+Be thorough but concise. You are protecting the operator's safety."""
+
+CROSSREF_PROMPT = """You are a senior Caterpillar TA1 inspection verifier.
+
+You have been provided:
+1. A visual AI analysis of equipment frames (what the AI SEES)
+2. The operator's spoken assessment (what the operator SAID)
+3. Historical inspection logs (past grade and condition)
+
+Your job is to cross-reference these three sources, map the inspected component to the official Caterpillar TA1 checklist, compare current wear to history, and produce a final graded verdict.
+
+[OFFICIAL CATERPILLAR TA1 CHECKLIST]
+1.1 Tires and Rims
+1.2 Bucket Cutting Edge, Tips, or Moldboard
+1.3 Bucket Tilt Cylinders and Hoses
+1.4 Bucket, Lift Cylinders and Hoses
+1.5 Lift arm attachment to frame
+1.6 Underneath of Machine
+1.7 Transmission and Transfer Gears
+1.8 Differential and Final Drive Oil
+1.9 Steps and Handrails
+1.10 Brake Air Tank; inspect
+1.11 Fuel Tank
+1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals
+1.13 Hydraulic fluid tank, inspect
+1.14 Transmission Oil
+1.15 Work Lights
+1.16 Battery & Cables
+2.1 Engine Oil Level
+2.2 Engine Coolant Level
+2.3 Check Radiator Cores for Debris
+2.4 Inspect Hoses for Cracks or Leaks
+2.5 Primary/secondary fuel filters
+2.6 All Belts
+2.7 Air Cleaner and Air Filter Service Indicator
+2.8 Overall Engine Compartment
+3.1 Steps & Handrails
+3.2 ROPS/FOPS
+3.3 Fire Extinguisher
+3.4 Windshield wipers and washers
+3.5 Side Doors
+4.1 Seat
+4.2 Seat belt and mounting
+4.3 Horn
+4.4 Backup Alarm
+4.5 Windows and Mirrors
+4.6 Cab Air Filter
+4.7 Indicators & Gauges
+4.8 Switch functionality
+4.9 Overall Cab Interior
+
+STEP 1 — MAP & GRADE:
+  - Identify which exact item from the checklist above is being inspected. Output it exactly as written.
+  - Grade: Green (Pass), Yellow (Monitor), Red (Fail/Action Required), None (unidentifiable)
+
+STEP 2 — COMPARE: What did the operator say vs what the AI sees vs History?
+  - Do they agree or disagree?
+  - Does new visual show accelerated wear vs historical baseline?
+
+STEP 3 — RESOLVE & STATUS:
+  - AGREE + Green -> PASS
+  - AGREE + Yellow -> MONITOR
+  - AGREE + Red -> FAIL
+  - DISAGREE (AI sees worse) -> Trust the AI, escalate grade, return CLARIFY with a specific question
+  - AMBIGUOUS -> CLARIFY with a specific yes/no question
+
+Focus ONLY on the component present in the current clip."""
 
 AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
 
@@ -472,4 +605,34 @@ AUDIO_SCHEMA = {
         }
     },
     "required": ["full_text", "segments", "components_mentioned"]
+}
+
+CROSSREF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "final_status": {
+            "type": "string",
+            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY"]
+        },
+        "confidence": {"type": "number"},
+        "checklist_mapped_item": {"type": "string"},
+        "checklist_grade": {
+            "type": "string",
+            "enum": ["Green", "Yellow", "Red", "None"]
+        },
+        "verdict_reasoning": {"type": "string"},
+        "clarification_question": {"type": "string"},
+        "recommendation": {"type": "string"},
+        "chain_of_thought": {
+            "type": "object",
+            "properties": {
+                "audio_says": {"type": "string"},
+                "visual_shows": {"type": "string"},
+                "comparison": {"type": "string"},
+                "checklist_mapping_reasoning": {"type": "string"}
+            },
+            "required": ["audio_says", "visual_shows", "comparison"]
+        }
+    },
+    "required": ["final_status", "confidence", "checklist_mapped_item", "checklist_grade", "verdict_reasoning", "chain_of_thought"]
 }
