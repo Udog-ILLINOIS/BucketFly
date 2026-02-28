@@ -10,7 +10,7 @@
 | # | Phase | Goal | Requirements |
 |---|-------|------|--------------|
 | 1 | Foundation & Capture | ✅ Working video+audio capture on mobile web | CAPT-01–05, UI-02, UI-04 |
-| 2 | Input Parsing | Gemini analyzes frames (visual) and transcribes audio separately | AI-01, AI-02, AI-03 |
+| 2 | Input Parsing | ✅ Gemini analyzes frames (visual) and transcribes audio | AI-01, AI-02, AI-03 |
 | 3 | AI Analysis & Results | Cross-reference visual + audio, produce structured verdict | AI-04, AI-05, AI-06, CLAR-01–04 |
 | 4 | Memory, History & UI | Supermemory integration, checklist, tabs, history view | HIST-01–04, LIST-01–03, UI-01, UI-03, UI-05 |
 | 5 | Demo Preparation | Three polished demo scenarios with rehearsal | DEMO-01–03 |
@@ -54,9 +54,11 @@
 
 ---
 
-### Phase 2: Input Parsing
+### Phase 2: Input Parsing ✅
 
 **Goal:** Verify Gemini can analyze captured frames (visual) and transcribe audio — test each independently before combining
+
+**Status:** COMPLETE — committed & pushed (`0a0ca73`)
 
 **Requirements:** AI-01, AI-02, AI-03
 

@@ -29,6 +29,7 @@ Test Gemini visual analysis (frames) and audio transcription independently. Veri
 - Gemini handles audio natively — send the audio blob directly
 - If Gemini transcription is too slow, fallback: browser Web Speech API for real-time transcription during recording (free, instant, sends text instead of audio)
 - Transcription output: text + timestamps per word/segment
+- for visual make sure gemini is CoT, Chain of Thought, so we can see its reasoning
 
 ### Visual analysis
 - Send key frames (already captured at 2fps as base64 JPEGs)
@@ -36,11 +37,11 @@ Test Gemini visual analysis (frames) and audio transcription independently. Veri
 - Structured JSON output from Gemini
 
 ### Claude's Discretion
-- Exact Gemini prompt wording for visual analysis
-- Exact Gemini prompt wording for audio transcription
+- Exact Gemini prompt wording for visual analysis (should be profesional and follow Catipillars workflow)
+- Exact Gemini prompt wording for audio transcription (should be exact, fast, and follow Catipillars termanology)
 - Whether to batch frames or send individually
 - Error retry strategy
-- How to handle no audio / silence
+- How to handle no audio / silence 
 
 </decisions>
 
@@ -48,7 +49,7 @@ Test Gemini visual analysis (frames) and audio transcription independently. Veri
 ## Specific Ideas
 
 - Timestamp correlation is the key insight: audio tells you WHAT, video tells you CONDITION
-- "1:30" on whiteboard = audio timestamp where a component name was spoken
+- "1:30" on whiteboard = audio timestamp where a component name was spoken (maybe find that frame in video?)
 - Test each independently first, then combine in Phase 3
 
 </specifics>
@@ -62,6 +63,17 @@ Test Gemini visual analysis (frames) and audio transcription independently. Veri
 - Result UI / status badges (Phase 3-4)
 
 </deferred>
+
+<post-implementation>
+## Post-Implementation Notes (Phase 2)
+
+During the execution of Phase 2, the following challenges and changes occurred:
+1. **Gemini Quota Issue:** `gemini-2.0-flash` returned a 429 error (quota exceeded, 0 limit for standard tier). We switched to `gemini-2.5-flash` which works perfectly.
+2. **Payload Size Limit:** Uploading 17 base64 frames exceeded Flask/Werkzeug's default `MAX_FORM_MEMORY_SIZE` of 500KB. We increased this to 50MB in `app.py`.
+3. **UI Addition:** The user requested to see the Chain of Thought reasoning immediately. We built the `ResultsView` UI (tabs for Record/Results) early in Phase 2 instead of waiting for Phase 3/4.
+4. **Audio Bug:** At the end of Phase 2, we noticed the real frontend capture wasn't successfully sending the audio blob to the backend (`has_audio: False`). The backend audio transcription works perfectly (verified with mock tests), but the frontend ↔ backend payload for audio needs debugging in Phase 3.
+
+</post-implementation>
 
 ---
 
