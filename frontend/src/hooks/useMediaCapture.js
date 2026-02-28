@@ -18,12 +18,13 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
 
     const streamRef = useRef(null);
     const mediaRecorderRef = useRef(null);
-    const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const frameIntervalRef = useRef(null);
     const timerIntervalRef = useRef(null);
     const audioChunksRef = useRef([]);
     const framesRef = useRef([]);
+    // Separate ref for the hidden video element used for frame capture
+    const hiddenVideoRef = useRef(null);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -50,6 +51,16 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         }
     }, []);
 
+    /**
+     * Attach stream to a video element. Call this from the component
+     * via a ref callback when the <video> element mounts.
+     */
+    const attachStream = useCallback((videoElement) => {
+        if (videoElement && streamRef.current) {
+            videoElement.srcObject = streamRef.current;
+        }
+    }, []);
+
     const startRecording = useCallback(async () => {
         try {
             setStatus('requesting');
@@ -72,10 +83,16 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
 
             streamRef.current = stream;
 
-            // Attach to video element for live preview
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
+            // Create a hidden video element for frame extraction (always available)
+            if (!hiddenVideoRef.current) {
+                hiddenVideoRef.current = document.createElement('video');
+                hiddenVideoRef.current.setAttribute('autoplay', '');
+                hiddenVideoRef.current.setAttribute('playsinline', '');
+                hiddenVideoRef.current.setAttribute('muted', '');
+                hiddenVideoRef.current.muted = true;
             }
+            hiddenVideoRef.current.srcObject = stream;
+            await hiddenVideoRef.current.play().catch(() => { });
 
             // Create canvas for frame extraction
             if (!canvasRef.current) {
@@ -83,11 +100,16 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             }
 
             // Set up MediaRecorder for audio capture
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-                    ? 'video/webm;codecs=vp9'
-                    : 'video/webm'
-            });
+            let mimeType = 'video/webm';
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                mimeType = 'video/webm;codecs=vp9';
+            } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                mimeType = 'video/webm';
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                mimeType = 'video/mp4';
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
@@ -98,7 +120,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start(1000); // Collect chunks every second
 
-            // Start key frame extraction at ~2fps
+            // Start key frame extraction at ~2fps using the hidden video
             // USER DECISION: Keep MORE frames than needed, do NOT downsample
             frameIntervalRef.current = setInterval(() => {
                 captureFrame();
@@ -125,14 +147,13 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
     }, [frameInterval]);
 
     const captureFrame = useCallback(() => {
-        if (!videoRef.current || !canvasRef.current) return;
+        const video = hiddenVideoRef.current;
+        if (!video || !canvasRef.current) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
-        const video = videoRef.current;
         const canvas = canvasRef.current;
-
-        // Set canvas size to match video
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -159,7 +180,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             timerIntervalRef.current = null;
         }
 
-        // Capture one final frame to make sure we don't miss the last moment
+        // Capture one final frame
         captureFrame();
 
         // Stop MediaRecorder
@@ -171,6 +192,11 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
+        }
+
+        // Clean up hidden video
+        if (hiddenVideoRef.current) {
+            hiddenVideoRef.current.srcObject = null;
         }
 
         // Build audio blob from chunks
@@ -187,6 +213,9 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
 
     const reset = useCallback(() => {
         stopAllStreams();
+        if (hiddenVideoRef.current) {
+            hiddenVideoRef.current.srcObject = null;
+        }
         setStatus('idle');
         setFrames([]);
         setAudioBlob(null);
@@ -205,6 +234,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         startRecording,
         stopRecording,
         reset,
-        videoRef,
+        attachStream, // Use this as ref callback on <video> element
+        stream: streamRef.current,
     };
 }

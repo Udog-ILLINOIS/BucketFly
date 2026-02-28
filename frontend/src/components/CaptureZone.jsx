@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useMediaCapture } from '../hooks/useMediaCapture';
 import './CaptureZone.css';
 
@@ -11,13 +11,6 @@ import './CaptureZone.css';
  * - processing: Upload progress indicator
  * - done: Upload confirmation
  * - error: Error message with retry
- * 
- * User decisions:
- * - Tap only (no press-and-hold, no buttons)
- * - iPhone Camera style with Cat gray/yellow border
- * - Cat logo on left side
- * - No camera control buttons
- * - Auto-upload after recording
  */
 export function CaptureZone({ onInspectionComplete }) {
     const {
@@ -29,11 +22,19 @@ export function CaptureZone({ onInspectionComplete }) {
         startRecording,
         stopRecording,
         reset,
-        videoRef,
+        attachStream,
     } = useMediaCapture({ frameInterval: 500 });
 
-    const [uploadStatus, setUploadStatus] = useState(null); // null | 'uploading' | 'success' | 'error'
+    const [uploadStatus, setUploadStatus] = useState(null);
     const [uploadMessage, setUploadMessage] = useState('');
+    const liveVideoRef = useRef(null);
+
+    // When status changes to 'recording', attach the stream to the visible video element
+    useEffect(() => {
+        if (status === 'recording' && liveVideoRef.current) {
+            attachStream(liveVideoRef.current);
+        }
+    }, [status, attachStream]);
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -53,7 +54,6 @@ export function CaptureZone({ onInspectionComplete }) {
                     await onInspectionComplete(result.frames, result.audioBlob);
                     setUploadStatus('success');
                     setUploadMessage(`Upload complete! ${result.frames.length} frames captured ✓`);
-                    // Reset after 3 seconds
                     setTimeout(() => {
                         reset();
                         setUploadStatus(null);
@@ -64,7 +64,6 @@ export function CaptureZone({ onInspectionComplete }) {
                     setUploadMessage(`Upload failed: ${err.message}`);
                 }
             } else if (result) {
-                // No upload handler, just show frame count
                 setUploadStatus('success');
                 setUploadMessage(`Captured ${result.frames.length} frames ✓`);
                 setTimeout(() => {
@@ -74,7 +73,6 @@ export function CaptureZone({ onInspectionComplete }) {
                 }, 3000);
             }
         } else if (status === 'done' && uploadStatus === 'error') {
-            // Retry
             reset();
             setUploadStatus(null);
             setUploadMessage('');
@@ -122,7 +120,7 @@ export function CaptureZone({ onInspectionComplete }) {
                 {status === 'recording' && (
                     <div className="viewfinder">
                         <video
-                            ref={videoRef}
+                            ref={liveVideoRef}
                             autoPlay
                             playsInline
                             muted
