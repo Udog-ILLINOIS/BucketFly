@@ -16,7 +16,7 @@ import './CaptureZone.css';
  */
 const IDENTIFY_INTERVAL_MS = 3000; // Send a frame every 3 seconds
 
-export function CaptureZone({ onInspectionComplete, checklistState = {} }) {
+export function CaptureZone({ onInspectionComplete, checklistState = {}, onRecordingStart, onItemIdentified }) {
     const {
         status,
         frames,
@@ -50,6 +50,12 @@ export function CaptureZone({ onInspectionComplete, checklistState = {} }) {
                 try {
                     const result = await identifyFrame(frame, checklistState);
                     setIdentification(result);
+                    // Update checklist in real-time when HIGH confidence item detected
+                    if (result && result.checklist_item && result.checklist_item !== 'None' 
+                        && result.confidence_label === 'HIGH' && !result.already_inspected
+                        && onItemIdentified) {
+                        onItemIdentified(result.checklist_item, result.confidence_label);
+                    }
                 } catch (err) {
                     console.warn('[IDENTIFY] Real-time identify failed:', err.message);
                 } finally {
@@ -90,6 +96,7 @@ export function CaptureZone({ onInspectionComplete, checklistState = {} }) {
 
     const handleTap = useCallback(async () => {
         if (status === 'idle' || status === 'error') {
+            if (onRecordingStart) onRecordingStart();
             await startRecording();
         } else if (status === 'recording') {
             const result = await stopRecording();
@@ -123,7 +130,7 @@ export function CaptureZone({ onInspectionComplete, checklistState = {} }) {
             setUploadStatus(null);
             setUploadMessage('');
         }
-    }, [status, uploadStatus, startRecording, stopRecording, reset, onInspectionComplete]);
+    }, [status, uploadStatus, startRecording, stopRecording, reset, onInspectionComplete, onRecordingStart]);
 
     return (
         <div

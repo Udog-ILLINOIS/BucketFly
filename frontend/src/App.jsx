@@ -257,6 +257,16 @@ function App() {
           <CaptureZone
             onInspectionComplete={isClarifying ? handleClarificationComplete : handleInspectionComplete}
             checklistState={checklistState}
+            onRecordingStart={() => {
+              // Don't clear checklist state — accumulate across recordings
+              // so the daily inspection sheet retains all recorded data
+            }}
+            onItemIdentified={(item, grade) => {
+              setChecklistState(prev => ({
+                ...prev,
+                [item]: prev[item] || 'Green'
+              }));
+            }}
           />
         )}
         {activeTab === 'report' && (

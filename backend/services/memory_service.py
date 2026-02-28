@@ -192,14 +192,14 @@ class MemoryService:
             )
 
             dates = set()
-            if hasattr(response, 'results'):
-                for doc in response.results:
-                    metadata = {}
-                    if hasattr(doc, 'metadata') and doc.metadata:
-                        metadata = dict(doc.metadata) if not isinstance(doc.metadata, dict) else doc.metadata
-                    date_str = metadata.get("inspection_date", "")
-                    if date_str and date_str != "unknown":
-                        dates.add(date_str)
+            docs = getattr(response, 'memories', None) or getattr(response, 'results', [])
+            for doc in docs:
+                metadata = {}
+                if hasattr(doc, 'metadata') and doc.metadata:
+                    metadata = dict(doc.metadata) if not isinstance(doc.metadata, dict) else doc.metadata
+                date_str = metadata.get("inspection_date", "")
+                if date_str and date_str != "unknown":
+                    dates.add(date_str)
 
             return sorted(dates, reverse=True)
 

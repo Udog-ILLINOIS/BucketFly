@@ -85,7 +85,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         }
     }, [isActive]);
 
-    if (!isActive || !identification) return null;
+    if (!isActive) return null;
 
     const {
         checklist_item: checklistItem,
@@ -94,7 +94,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         guidance,
         already_inspected: alreadyInspected,
         existing_grade: existingGrade,
-    } = identification;
+    } = identification || {};
 
     const isNone = !checklistItem || checklistItem === 'None';
 
@@ -119,7 +119,8 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         "4.8 Switch functionality", "4.9 Overall Cab Interior"
     ];
     const inspectedCount = Object.keys(checklistState).length;
-    const missedItems = allItems.filter(item => !checklistState[item]);
+    // Show items that have been inspected (exist in checklistState)
+    const inspectedItems = Object.keys(checklistState);
 
     const confidenceClass = (confidenceLabel || 'LOW').toLowerCase();
 
@@ -164,20 +165,25 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
                 </div>
             )}
 
-            {/* Bottom: Missed items ticker */}
+            {/* Bottom: Inspected items ticker */}
             <div className="lf-bottom-bar">
                 <div className="lf-progress-summary">
                     <span className="lf-progress-count">{inspectedCount}/{allItems.length}</span>
                     <span className="lf-progress-label">inspected</span>
                 </div>
-                <div className="lf-missed-ticker">
-                    {missedItems.slice(0, 6).map((item, i) => (
-                        <span key={i} className="lf-missed-chip">{item.split(' ').slice(1).join(' ')}</span>
-                    ))}
-                    {missedItems.length > 6 && (
-                        <span className="lf-missed-more">+{missedItems.length - 6} more</span>
-                    )}
-                </div>
+                {inspectedItems.length > 0 && (
+                    <div className="lf-missed-ticker">
+                        {inspectedItems.slice(-6).map((item, i) => (
+                            <span key={i} className="lf-inspected-chip">
+                                {checklistState[item] === 'Green' ? '✅' : checklistState[item] === 'Yellow' ? '⚠️' : checklistState[item] === 'Red' ? '🚨' : '✓'}
+                                {' '}{item.replace(/^\d+\.\d+\s*/, '')}
+                            </span>
+                        ))}
+                        {inspectedItems.length > 6 && (
+                            <span className="lf-missed-more">+{inspectedItems.length - 6} more</span>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
