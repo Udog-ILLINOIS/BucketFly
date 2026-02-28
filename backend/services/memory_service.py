@@ -1,103 +1,243 @@
+"""
+MemoryService — Supermemory-backed inspection memory.
+
+Stores inspection results (text, audio transcripts, frames) in the Supermemory
+cloud API with semantic search. Data is scoped per machine via container_tag.
+"""
+
 import os
 import json
+from datetime import datetime
+from dotenv import load_dotenv
+from supermemory import Supermemory
+
+load_dotenv()
+
+DEFAULT_MACHINE_ID = "W8210127"
+
 
 class MemoryService:
     def __init__(self):
-        # We'll store our history in a local JSON file for the demo
-        self.history_file = os.path.join(os.path.dirname(__file__), '..', 'history.json')
-        print(f"[INFO] Initialized local JSON MemoryService at {self.history_file}")
+        api_key = os.getenv("SUPERMEMORY_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "SUPERMEMORY_API_KEY not set in .env — "
+                "get a free key at https://supermemory.ai"
+            )
+        self.client = Supermemory(api_key=api_key)
+        print("[MEMORY] Initialized Supermemory cloud service")
 
-    def _load_history(self):
-        if not os.path.exists(self.history_file):
-            return []
-        try:
-            with open(self.history_file, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[ERROR] Failed to load history: {e}")
-            return []
+    @staticmethod
+    def _machine_tag(machine_id: str) -> str:
+        """Normalize machine ID into a container tag."""
+        return f"machine-{machine_id}"
 
-    def _save_all_history(self, history_list):
+    def save_inspection(
+        self,
+        inspection_id: str,
+        component: str,
+        grade: str,
+        notes: str,
+        raw_analysis: dict,
+        audio_transcript: str = "",
+        frames: list = None,
+        machine_id: str = DEFAULT_MACHINE_ID,
+    ) -> bool:
+        """
+        Save an inspection to Supermemory.
+
+        Stores a structured text document with metadata for filtering,
+        scoped to the machine's container tag.
+        """
+        if frames is None:
+            frames = []
+
         try:
-            with open(self.history_file, 'w') as f:
-                json.dump(history_list, f, indent=2)
+            # Build a rich text document for semantic search
+            content_parts = [
+                f"INSPECTION REPORT — {inspection_id}",
+                f"Component: {component}",
+                f"Grade: {grade}",
+                f"Final Status: {raw_analysis.get('final_status', 'UNKNOWN')}",
+                f"Notes: {notes}",
+            ]
+
+            # Include chain-of-thought reasoning if present
+            cot = raw_analysis.get("chain_of_thought", {})
+            if cot:
+                content_parts.append(f"Visual Observations: {cot.get('visual_shows', cot.get('observations', ''))}")
+                content_parts.append(f"Audio Says: {cot.get('audio_says', '')}")
+                content_parts.append(f"Comparison: {cot.get('comparison', '')}")
+
+            if audio_transcript:
+                content_parts.append(f"Operator Audio Transcript: {audio_transcript}")
+
+            # Include first frame as inline base64 reference (supermemory can index text)
+            if frames:
+                content_parts.append(f"Frame Count: {len(frames)}")
+                # Store the first frame inline — supermemory processes text content
+                first_frame = frames[0]
+                if ',' in first_frame:
+                    first_frame = first_frame.split(',')[1]
+                content_parts.append(f"Primary Frame (base64): {first_frame[:200]}...")  # Truncated reference
+
+            content = "\n".join(content_parts)
+
+            # Parse date from inspection_id (format: YYYYMMDD_HHMMSS_ffffff)
+            inspection_date = "unknown"
+            if len(inspection_id) >= 8 and inspection_id[:8].isdigit():
+                d = inspection_id[:8]
+                inspection_date = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+
+            # Store in Supermemory
+            result = self.client.add(
+                content=content,
+                custom_id=inspection_id,
+                container_tag=self._machine_tag(machine_id),
+                metadata={
+                    "component": component,
+                    "grade": grade,
+                    "final_status": raw_analysis.get("final_status", "UNKNOWN"),
+                    "inspection_date": inspection_date,
+                    "has_audio": bool(audio_transcript),
+                    "frame_count": float(len(frames)),
+                },
+            )
+
+            print(f"[MEMORY] Saved inspection {inspection_id} for {component} -> Supermemory (tag: {self._machine_tag(machine_id)})")
             return True
+
         except Exception as e:
-            print(f"[ERROR] Failed to write history: {e}")
+            print(f"[ERROR] Supermemory save failed: {e}")
             return False
 
-    def save_inspection(self, inspection_id: str, component: str, grade: str, notes: str, raw_analysis: dict, audio_transcript: str = "", frames: list = []) -> bool:
+    def get_history(
+        self,
+        component_query: str,
+        limit: int = 5,
+        machine_id: str = DEFAULT_MACHINE_ID,
+    ) -> list:
         """
-        Save the structured inspection result to the local JSON file.
-        """
-        try:
-            history = self._load_history()
-            
-            # Create a new record
-            new_record = {
-                "inspection_id": inspection_id,
-                "component": component,
-                "grade": grade,
-                "operator_notes": notes,
-                "audio_transcript": audio_transcript,
-                "frame_count": len(frames),
-                "ai_analysis": raw_analysis,
-                "frames": frames
-            }
-            
-            # Add to the beginning of the list (newest first)
-            history.insert(0, new_record)
-            
-            # Save back to disk
-            success = self._save_all_history(history)
-            
-            print(f"[MEMORY] Saved inspection {inspection_id} for {component}. Success: {success}")
-            return success
-        except Exception as e:
-            print(f"[ERROR] Failed to save inspection to memory: {e}")
-            return False
+        Retrieve past inspection records for a component using semantic search.
 
-    def get_history(self, component_query: str, limit: int = 5) -> list:
-        """
-        Retrieve past inspection records for a specific component from the JSON file.
+        Unlike the old JSON approach, this finds semantically similar records —
+        e.g., searching "tire" will match "Tires and Rims" records.
         """
         try:
-            history = self._load_history()
-            matches = [record for record in history if component_query.lower() in record.get("component", "").lower()]
-            return matches[:limit]
+            response = self.client.search.documents(
+                q=f"{component_query} inspection history",
+                container_tags=[self._machine_tag(machine_id)],
+                limit=limit,
+                include_summary=True,
+                include_full_docs=True,
+            )
+
+            # Convert Supermemory results back to our internal format
+            records = []
+            for doc in response.results:
+                metadata = {}
+                if hasattr(doc, 'metadata') and doc.metadata:
+                    metadata = dict(doc.metadata) if not isinstance(doc.metadata, dict) else doc.metadata
+
+                records.append({
+                    "inspection_id": getattr(doc, 'document_id', '') or metadata.get("custom_id", ""),
+                    "component": metadata.get("component", "Unknown"),
+                    "grade": metadata.get("grade", "None"),
+                    "operator_notes": getattr(doc, 'summary', '') or "",
+                    "audio_transcript": "",  # Not stored separately in metadata
+                    "frame_count": int(metadata.get("frame_count", 0)),
+                    "ai_analysis": {
+                        "final_status": metadata.get("final_status", "UNKNOWN"),
+                    },
+                    "content": getattr(doc, 'content', '') or "",
+                    "score": getattr(doc, 'score', 0),
+                })
+
+            return records
+
         except Exception as e:
-            print(f"[ERROR] Failed to retrieve history for {component_query}: {e}")
+            print(f"[ERROR] Supermemory search failed for '{component_query}': {e}")
             return []
 
-    def get_available_dates(self) -> list:
+    def get_available_dates(self, machine_id: str = DEFAULT_MACHINE_ID) -> list:
         """
-        Return a sorted list of distinct inspection dates (YYYY-MM-DD) descending.
+        Return a sorted list of distinct inspection dates (YYYY-MM-DD), newest first.
         """
         try:
-            history = self._load_history()
+            # Search broadly to get documents, extract dates from metadata
+            response = self.client.documents.list(
+                container_tags=[self._machine_tag(machine_id)],
+                limit=100,
+            )
+
             dates = set()
-            for record in history:
-                iid = record.get("inspection_id", "")
-                if len(iid) >= 8 and iid[:8].isdigit():
-                    d = iid[:8]
-                    dates.add(f"{d[:4]}-{d[4:6]}-{d[6:8]}")
+            if hasattr(response, 'results'):
+                for doc in response.results:
+                    metadata = {}
+                    if hasattr(doc, 'metadata') and doc.metadata:
+                        metadata = dict(doc.metadata) if not isinstance(doc.metadata, dict) else doc.metadata
+                    date_str = metadata.get("inspection_date", "")
+                    if date_str and date_str != "unknown":
+                        dates.add(date_str)
+
             return sorted(dates, reverse=True)
+
         except Exception as e:
-            print(f"[ERROR] Failed to get available dates: {e}")
+            print(f"[ERROR] Supermemory dates fetch failed: {e}")
             return []
 
-    def get_history_by_date(self, date_str: str) -> list:
+    def get_history_by_date(
+        self,
+        date_str: str,
+        machine_id: str = DEFAULT_MACHINE_ID,
+    ) -> list:
         """
-        Return all inspections for a given date string (YYYY-MM-DD), newest first.
+        Fetch all inspection records for a given date (YYYY-MM-DD).
         """
         try:
-            history = self._load_history()
-            date_prefix = date_str.replace("-", "")  # YYYYMMDD
-            matches = [r for r in history if r.get("inspection_id", "").startswith(date_prefix)]
-            return matches
+            # Search for all inspections on this date
+            response = self.client.search.documents(
+                q=f"inspection on {date_str}",
+                container_tags=[self._machine_tag(machine_id)],
+                limit=50,
+                include_full_docs=True,
+                include_summary=True,
+                filters={
+                    "AND": [
+                        {
+                            "key": "inspection_date",
+                            "value": date_str,
+                            "operator": "eq",
+                        }
+                    ]
+                },
+            )
+
+            records = []
+            for doc in response.results:
+                metadata = {}
+                if hasattr(doc, 'metadata') and doc.metadata:
+                    metadata = dict(doc.metadata) if not isinstance(doc.metadata, dict) else doc.metadata
+
+                records.append({
+                    "inspection_id": getattr(doc, 'document_id', '') or metadata.get("custom_id", ""),
+                    "component": metadata.get("component", "Unknown"),
+                    "grade": metadata.get("grade", "None"),
+                    "operator_notes": getattr(doc, 'summary', '') or "",
+                    "audio_transcript": "",
+                    "frame_count": int(metadata.get("frame_count", 0)),
+                    "ai_analysis": {
+                        "final_status": metadata.get("final_status", "UNKNOWN"),
+                    },
+                    "content": getattr(doc, 'content', '') or "",
+                })
+
+            return records
+
         except Exception as e:
-            print(f"[ERROR] Failed to get history by date {date_str}: {e}")
+            print(f"[ERROR] Supermemory history by date failed for {date_str}: {e}")
             return []
+
 
 # Singleton instance
 memory = MemoryService()
