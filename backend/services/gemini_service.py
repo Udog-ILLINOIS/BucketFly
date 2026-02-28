@@ -24,7 +24,7 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY not set in .env")
 
         self.client = genai.Client(api_key=api_key)
-        self.model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
+        self.model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-native-audio-dialog')
 
     # ──────────────────────────────────────────────
     # VISUAL ANALYSIS
@@ -118,6 +118,146 @@ class GeminiService:
             result = {"raw_response": response.text, "parse_error": True}
 
         result["processing_time_seconds"] = elapsed
+        return result
+
+    # ──────────────────────────────────────────────
+    # CROSS-REFERENCE (Visual vs Audio)
+    # ──────────────────────────────────────────────
+    
+    def cross_reference(self, visual_analysis: dict, audio_transcription: dict, frames_b64: list, history: list = None) -> dict:
+        """
+        Cross-reference visual analysis vs audio assessment, incorporating history.
+        Maps the component to the Cat checklist and grades it.
+        Returns final verdict.
+        """
+        start = time.time()
+
+        visual_summary = (
+            f"VISUAL ANALYSIS:\n"
+            f"  Component: {visual_analysis.get('component', 'unknown')}\n"
+            f"  Preliminary status: {visual_analysis.get('preliminary_status', 'UNCLEAR')}\n"
+            f"  Observations: {', '.join(visual_analysis.get('condition_observations', []))}\n"
+            f"  Concerns: {', '.join(visual_analysis.get('concerns', []))}\n"
+            f"  Confidence: {visual_analysis.get('confidence', 0)}\n"
+            f"  AI reasoning: {visual_analysis.get('chain_of_thought', {}).get('conclusion', '')}"
+        )
+
+        audio_summary = (
+            f"OPERATOR'S SPOKEN ASSESSMENT:\n"
+            f"  Transcript: \"{audio_transcription.get('full_text', 'No audio provided')}\"\n"
+            f"  Components mentioned: {[c.get('name', 'unknown') for c in audio_transcription.get('components_mentioned', [])]}"
+        )
+
+        history_summary = "HISTORICAL INSPECTION LOGS:\n"
+        if not history:
+            history_summary += "  No previous inspections found for this component.\n"
+        else:
+            for item in history:
+                grade = item.get("grade", "unknown")
+                notes = item.get("operator_notes", "")
+                history_summary += f"  - Previous Grade: {grade}, Notes: '{notes}'\n"
+
+        parts = []
+
+        # Include top 3 key frames for model to re-examine if needed
+        for frame_b64 in frames_b64[:3]:
+            raw = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
+            parts.append(types.Part.from_bytes(
+                data=base64.b64decode(raw), mime_type="image/jpeg"
+            ))
+
+        parts.append(visual_summary)
+        parts.append("\n\n")
+        parts.append(audio_summary)
+        parts.append("\n\n")
+        parts.append(history_summary)
+        parts.append("\n\n")
+        parts.append(CROSSREF_PROMPT)
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=parts,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CROSSREF_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {"raw_response": response.text, "parse_error": True,
+                      "final_status": "UNCLEAR"}
+
+        result["processing_time_seconds"] = elapsed
+        return result
+
+    def clarify_with_context(self, original_analysis: dict, new_audio_bytes: bytes, frames_b64: list) -> dict:
+        """
+        Takes the original inspection JSON (which returned CLARIFY),
+        process the new audio response, and run cross-reference again
+        to get a definitive PASS/MONITOR/FAIL.
+        """
+        start = time.time()
+        
+        # 1. Transcribe the new clarification audio
+        clarification_transcription = self.transcribe_audio(new_audio_bytes)
+        
+        # 2. Build the context history
+        prior_context = (
+            f"PREVIOUS ANALYSIS (Resulted in CLARIFY status):\n"
+            f"Original Visual Analysis: {json.dumps(original_analysis.get('visual_analysis', {}))}\n"
+            f"Original Audio Transcript: {original_analysis.get('audio_transcription', {}).get('full_text', '')}\n"
+            f"Cross-Reference Mapped Item: {original_analysis.get('cross_reference', {}).get('checklist_mapped_item', 'Unknown')}\n"
+            f"Clarification Question Asked: {original_analysis.get('cross_reference', {}).get('clarification_question', '')}\n"
+        )
+        
+        operator_response = (
+            f"\nOPERATOR'S CLARIFICATION RESPONSE:\n"
+            f"\"{clarification_transcription.get('full_text', 'No talking detected')}\"\n"
+        )
+        
+        prompt = (
+            f"{CROSSREF_PROMPT}\n\n"
+            f"This is a CLARIFICATION round. The AI previously asked the operator a question to resolve an ambiguity.\n"
+            f"Read the operator's response and definitively grade the item Green, Yellow, or Red, and return the final status (PASS, MONITOR, or FAIL).\n"
+            f"Do not return CLARIFY again."
+        )
+
+        parts = []
+
+        # Include frames again
+        for frame_b64 in frames_b64[:3]:
+            raw = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
+            parts.append(types.Part.from_bytes(
+                data=base64.b64decode(raw), mime_type="image/jpeg"
+            ))
+
+        parts.append(prior_context)
+        parts.append(operator_response)
+        parts.append(prompt)
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=parts,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CROSSREF_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {"raw_response": response.text, "parse_error": True, "final_status": "UNCLEAR"}
+
+        result["processing_time_seconds"] = elapsed
+        result["clarification_transcript"] = clarification_transcription.get('full_text', '')
         return result
 
     # ──────────────────────────────────────────────
@@ -276,3 +416,110 @@ AUDIO_SCHEMA = {
     },
     "required": ["full_text", "segments", "components_mentioned"]
 }
+
+CROSSREF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "final_status": {
+            "type": "string",
+            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY"]
+        },
+        "confidence": {"type": "number"},
+        "checklist_mapped_item": {"type": "string"},
+        "checklist_grade": {
+            "type": "string",
+            "enum": ["Green", "Yellow", "Red", "None"]
+        },
+        "verdict_reasoning": {"type": "string"},
+        "clarification_question": {"type": "string"},
+        "recommendation": {"type": "string"},
+        "chain_of_thought": {
+            "type": "object",
+            "properties": {
+                "audio_says": {"type": "string"},
+                "visual_shows": {"type": "string"},
+                "comparison": {"type": "string"},
+                "checkist_mapping_reasoning": {"type": "string"}
+            },
+            "required": ["audio_says", "visual_shows", "comparison"]
+        }
+    },
+    "required": ["final_status", "confidence", "checklist_mapped_item", "checklist_grade", "verdict_reasoning", "chain_of_thought"]
+}
+
+CROSSREF_PROMPT = """You are a senior Caterpillar TA1 inspection verifier.
+
+You have been provided:
+1. A visual AI analysis of equipment frames (what the AI SEES)
+2. The operator's spoken assessment (what the operator SAID)
+3. Historical inspection logs (past grade and condition)
+
+Your job is to cross-reference these three sources, map the inspected component to the official Caterpillar TA1 checklist, compare current wear to history, and produce a final graded verdict.
+
+[OFFICIAL CATERPILLAR TA1 CHECKLIST]
+1.1 Tires and Rims
+1.2 Bucket Cutting Edge, Tips, or Moldboard
+1.3 Bucket Tilt Cylinders and Hoses
+1.4 Bucket, Lift Cylinders and Hoses
+1.5 Lift arm attachment to frame
+1.6 Underneath of Machine
+1.7 Transmission and Transfer Gears
+1.8 Differential and Final Drive Oil
+1.9 Steps and Handrails
+1.10 Brake Air Tank; inspect
+1.11 Fuel Tank
+1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals
+1.13 Hydraulic fluid tank, inspect
+1.14 Transmission Oil
+1.15 Work Lights
+1.16 Battery & Cables
+2.1 Engine Oil Level
+2.2 Engine Coolant Level
+2.3 Check Radiator Cores for Debris
+2.4 Inspect Hoses for Cracks or Leaks
+2.5 Primary/secondary fuel filters
+2.6 All Belts
+2.7 Air Cleaner and Air Filter Service Indicator
+2.8 Overall Engine Compartment
+3.1 Steps & Handrails
+3.2 ROPS/FOPS
+3.3 Fire Extinguisher
+3.4 Windshield wipers and washers
+3.5 Side Doors
+4.1 Seat
+4.2 Seat belt and mounting
+4.3 Horn
+4.4 Backup Alarm
+4.5 Windows and Mirrors
+4.6 Cab Air Filter
+4.7 Indicators & Gauges
+4.8 Switch functionality
+4.9 Overall Cab Interior
+
+STEP 1 — MAP & GRADE:
+  - Identify which exact item from the checklist above is being inspected in the provided frames/audio. Output it exactly as written.
+  - Grade the item:
+    - Green (Pass / Normal condition / Acceptable wear)
+    - Yellow (Monitor / Minor wear / Needs attention soon)
+    - Red (Fail / Action Required / Safety hazard / Extreme wear)
+    - None (If no component from the list can be identified)
+
+STEP 2 — COMPARE: What did the operator say vs what the AI sees vs History?
+  - Does the new visual analysis show accelerated wear/damage compared to the historical baseline? If it was Green yesterday but shows moderate wear today, flag it.
+  - Do they agree? (e.g., operator says "looks good", AI sees no defects -> AGREE)
+  - Do they disagree? (e.g., operator says "looks good", AI sees a leak -> DISAGREE)
+  - If no audio, rely completely on the visual and its comparison to history.
+
+STEP 3 — RESOLVE & STATUS:
+  - AGREE + Green grade -> PASS
+  - AGREE + Yellow grade -> MONITOR
+  - AGREE + Red grade -> FAIL
+  - DISAGREE (AI sees worse condition than operator claims) -> Trust the AI, escalate grade, AND return CLARIFY status to ask the operator about the discrepancy.
+  - AMBIGUOUS or contradictory -> CLARIFY (ask a specific yes/no question)
+
+When returning CLARIFY, the clarification_question MUST be specific:
+  GOOD: "I noticed a puddle beneath the tilt cylinder that you didn't mention. Is that fresh hydraulic fluid or water?"
+  BAD: "Can you clarify the condition?"
+
+Focus ONLY on the component(s) present in the current clip. DO NOT penalize or prompt about other items on the checklist that are simply missing from this video. We only grade what we see.
+"""

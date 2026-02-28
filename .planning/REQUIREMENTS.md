@@ -36,6 +36,7 @@ Requirements for HackIllinois 2026 demo. Each maps to roadmap phases.
 - [ ] **LIST-01**: Dynamic checklist displays all inspected components with color-coded status
 - [ ] **LIST-02**: Checklist updates in real-time as components are inspected
 - [ ] **LIST-03**: Each checklist item shows component name, status badge, and AI confidence
+- [ ] **LIST-04**: Checklist strictly follows standard Caterpillar framework (From the Ground, Engine Compartment, etc.) with items graded Green (Pass), Yellow (Monitor), or Red (Fail)
 
 ### History & Memory
 
@@ -118,6 +119,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIST-01 | Phase 4 | Pending |
 | LIST-02 | Phase 4 | Pending |
 | LIST-03 | Phase 4 | Pending |
+| LIST-04 | Phase 4 | Pending |
 | HIST-01 | Phase 3 | Pending |
 | HIST-02 | Phase 3 | Pending |
 | HIST-03 | Phase 3 | Pending |
@@ -132,10 +134,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEMO-03 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 30 total
-- Mapped to phases: 30
+- v1 requirements: 31 total
+- Mapped to phases: 31
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-28 — Added Cat framework checklist*

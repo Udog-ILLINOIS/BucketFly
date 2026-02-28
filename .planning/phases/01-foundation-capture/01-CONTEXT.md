@@ -24,10 +24,11 @@ Working video+audio capture on mobile web browser with a glove-friendly, full-sc
 - Audio is transcribed (by Gemini in Phase 2), then the raw audio file is discarded
 - Only key frames + transcript text are stored and sent for analysis
 - This reduces upload size and storage cost significantly
+- It is improtant that we do not accidentialy discard key frames, we would rather keep more frames than we need
 
 ### Screen layout & visual design
 - Camera viewfinder modeled after the iPhone Camera app
-- Bordered with Caterpillar brand colors: **gray frame with yellow accent border**
+- Bordered with Caterpillar brand colors: **gray frame with yellow accent border and cat logo on left side**
 - Clean, minimal — no cluttered controls during capture
 - High-contrast for outdoor visibility
 
@@ -48,9 +49,10 @@ Working video+audio capture on mobile web browser with a glove-friendly, full-sc
 <specifics>
 ## Specific Ideas
 
-- "Camera mode is like the camera on iPhone but bounded with a Cat-style gray and yellow border"
+- "Camera mode is like the camera on iPhone but bounded with a Cat-style gray and yellow border, and no start/stop/other-video-style buttons"
 - Auto-upload — zero friction after recording stops
 - Key frames only — smart compression to reduce data before AI analysis
+- when not recording, the screen should be black with the text prompt "Tap anywhere to start recording" in the center of the screen
 
 </specifics>
 

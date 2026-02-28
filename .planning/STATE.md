@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 ## Current Phase
 
-**Phase 3: AI Analysis & Results**
-- Status: Not started
-- Goal: Cross-reference visual + audio, produce structured verdict with clarification flow
-- Requirements: AI-04, AI-05, AI-06, CLAR-01–04
+**Phase 4: Memory, History & UI**
+- Status: Planning
+- Goal: Supermemory integration for historical comparison, standard Cat checklist rendering, tabs, history view
+- Requirements: HIST-01–04, LIST-01–04, UI-01, UI-03, UI-05
 
 ## Progress
 
@@ -20,8 +20,8 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 |-------|--------|----------|
 | 1 — Foundation & Capture | ✅ Complete | 100% |
 | 2 — Input Parsing | ✅ Complete | 100% |
-| 3 — AI Analysis & Results | ○ Pending | 0% |
-| 4 — Integration & UI | ○ Pending | 0% |
+| 3 — AI Analysis & Results | ✅ Complete | 100% |
+| 4 — Integration & UI | 🟡 In Progress | 10% |
 | 5 — Demo Preparation | ○ Pending | 0% |
 
 ## Todo
