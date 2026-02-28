@@ -1,7 +1,7 @@
 """
 Gemini AI Service — Cat Vision-Inspect
 
-Handles visual analysis (frames) and audio transcription via Gemini 2.0 Flash.
+Handles visual analysis (frames) and audio transcription via Gemini 2.0 Flash (gemini-2.0-flash).
 Uses Chain of Thought reasoning and Caterpillar TA1 inspection terminology.
 """
 
@@ -24,7 +24,8 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY not set in .env")
 
         self.client = genai.Client(api_key=api_key)
-        self.model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash-preview-native-audio-dialog')
+        self.model = 'gemini-2.5-flash-lite'
+        print(f'[GEMINI] Using model: {self.model}')
 
     # ──────────────────────────────────────────────
     # VISUAL ANALYSIS
@@ -489,7 +490,7 @@ CROSSREF_SCHEMA = {
                 "audio_says": {"type": "string"},
                 "visual_shows": {"type": "string"},
                 "comparison": {"type": "string"},
-                "checkist_mapping_reasoning": {"type": "string"}
+                "checklist_mapping_reasoning": {"type": "string"}
             },
             "required": ["audio_says", "visual_shows", "comparison"]
         }

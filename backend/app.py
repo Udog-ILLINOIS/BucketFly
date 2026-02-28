@@ -28,7 +28,7 @@ _gemini_service = None
 
 def get_gemini():
     global _gemini_service
-    if _gemini_service is None:
+    if True:
         from services.gemini_service import GeminiService
         _gemini_service = GeminiService()
     return _gemini_service
