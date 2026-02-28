@@ -8,6 +8,9 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
+# Allow large uploads (50MB) — recordings with many base64 frames can be large
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+
 # Config
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
