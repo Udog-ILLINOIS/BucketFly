@@ -1,7 +1,7 @@
 import React from 'react';
 import './ReportView.css';
 
-export function ReportView({ report }) {
+export function ReportView({ report, onReset }) {
     if (!report) return null;
 
     const renderSection = (title, items) => {
@@ -53,7 +53,7 @@ export function ReportView({ report }) {
             {renderSection("Inside The Cab", report.inside_cab)}
 
             <div className="report-footer">
-                <button className="btn-done" onClick={() => window.location.reload()}>New Inspection</button>
+                <button className="btn-done" onClick={onReset || (() => window.location.reload())}>New Inspection</button>
             </div>
         </div>
     );

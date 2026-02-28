@@ -57,20 +57,34 @@ def inspect():
         if request.is_json:
             data = request.get_json()
             frames = data.get('frames', [])
+            inspection_id = data.get('inspection_id', None)
             audio_data = None
         else:
             frames_json = request.form.get('frames', '[]')
             frames = json.loads(frames_json)
+            inspection_id = request.form.get('inspection_id', None)
             audio_file = request.files.get('audio')
             audio_data = audio_file.read() if audio_file else None
 
         if not frames:
             return jsonify({"error": "No frames provided"}), 400
 
-        # Create inspection directory
-        inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-        inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
-        os.makedirs(inspection_dir, exist_ok=True)
+        # Handle existing inspection vs new
+        is_existing = False
+        if inspection_id and inspection_id in INSPECTIONS_DB:
+            is_existing = True
+            inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
+            print(f"[INSPECT] Appending to existing inspection {inspection_id}")
+        else:
+            inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+            inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
+            os.makedirs(inspection_dir, exist_ok=True)
+            print(f"[INSPECT] Creating new inspection {inspection_id}")
+
+        # Determine starting index for frame names
+        existing_frames_count = 0
+        if is_existing:
+            existing_frames_count = INSPECTIONS_DB[inspection_id]["media"]["frame_count"]
 
         # Save frames to disk
         saved_frames = []
@@ -80,41 +94,61 @@ def inspect():
                 frame_b64 = frame_b64.split(',')[1]
             
             frame_bytes = base64.b64decode(frame_b64)
-            frame_path = os.path.join(inspection_dir, f'frame_{i:04d}.jpg')
+            # Use offset to not overwrite existing fames
+            frame_idx = existing_frames_count + i
+            frame_path = os.path.join(inspection_dir, f'frame_{frame_idx:04d}.jpg')
             with open(frame_path, 'wb') as f:
                 f.write(frame_bytes)
-            saved_frames.append(f'frame_{i:04d}.jpg')
+            saved_frames.append(f'frame_{frame_idx:04d}.jpg')
 
-        # Save audio if present
+        # Save audio if present (rename existing to prevent overwrite, or just overwrite current audio)
+        # We will append _<timestamp> to new audio files if existing
         has_audio = False
+        audio_path = None
         if audio_data and len(audio_data) > 0:
-            audio_path = os.path.join(inspection_dir, 'audio.webm')
+            audio_suffix = f"_{datetime.now().strftime('%H%M%S')}" if is_existing else ""
+            audio_filename = f"audio{audio_suffix}.webm"
+            audio_path = os.path.join(inspection_dir, audio_filename)
             with open(audio_path, 'wb') as f:
                 f.write(audio_data)
             has_audio = True
 
-        print(f"[INSPECT] Received inspection {inspection_id}: "
-              f"{len(saved_frames)} frames, audio={'yes' if has_audio else 'no'}")
+        print(f"[INSPECT] Received data for {inspection_id}: "
+              f"{len(saved_frames)} new frames, audio={'yes' if has_audio else 'no'}")
 
         # Construct full paths for the AI service
-        frame_paths = [os.path.join(inspection_dir, f) for f in saved_frames]
-        audio_path_full = audio_path if has_audio else None
+        
+        # Initialize or update state in DB
+        if is_existing:
+            # Update existing record
+            ins = INSPECTIONS_DB[inspection_id]
+            ins["status"] = "processing"
+            ins["media"]["frame_count"] += len(saved_frames)
+            ins["media"]["frames"].extend([f"/api/media/{inspection_id}/{f}" for f in saved_frames])
+            if has_audio:
+                ins["media"]["audio"] = f"/api/media/{inspection_id}/{audio_filename}"
+            ins["ai_draft"] = None # Reset draft
+            ins["error_msg"] = None
+        else:
+            # Create new record
+            INSPECTIONS_DB[inspection_id] = {
+                "id": inspection_id,
+                "status": "processing", # pending -> processing -> waiting_approval -> completed | error
+                "created_at": datetime.now().isoformat(),
+                "media": {
+                    "frame_count": len(saved_frames),
+                    "frames": [f"/api/media/{inspection_id}/{f}" for f in saved_frames],
+                    "audio": f"/api/media/{inspection_id}/audio.webm" if has_audio else None
+                },
+                "ai_draft": None,
+                "final_result": None,
+                "error_msg": None
+            }
 
-        # Initialize state in DB
-        INSPECTIONS_DB[inspection_id] = {
-            "id": inspection_id,
-            "status": "processing", # pending -> processing -> waiting_approval -> completed | error
-            "created_at": datetime.now().isoformat(),
-            "media": {
-                "frame_count": len(saved_frames),
-                "frames": [f"/api/media/{inspection_id}/{f}" for f in saved_frames],
-                "audio": f"/api/media/{inspection_id}/audio.webm" if has_audio else None
-            },
-            "ai_draft": None,
-            "final_result": None,
-            "error_msg": None,
-            "manual_override": False
-        }
+        # Gather ALL frame paths and the latest audio path for AI analysis
+        all_frame_filenames = [f.split('/')[-1] for f in INSPECTIONS_DB[inspection_id]["media"]["frames"]]
+        all_frame_paths = [os.path.join(inspection_dir, f) for f in all_frame_filenames]
+        latest_audio_path = os.path.join(inspection_dir, INSPECTIONS_DB[inspection_id]["media"]["audio"].split('/')[-1]) if INSPECTIONS_DB[inspection_id]["media"]["audio"] else None
 
         # Background task for AI analysis
         def run_ai_analysis(ins_id, f_paths, a_path):
@@ -149,8 +183,8 @@ def inspect():
                 "message": "Manual mode active. Waiting for admin."
             }), 200
         else:
-            # Start thread
-            processor = threading.Thread(target=run_ai_analysis, args=(inspection_id, frame_paths, audio_path_full))
+            # Start thread with ALL accumulated context
+            processor = threading.Thread(target=run_ai_analysis, args=(inspection_id, all_frame_paths, latest_audio_path))
             processor.start()
 
             # Return immediately to frontend

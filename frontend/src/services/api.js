@@ -5,13 +5,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
  * 
  * @param {string[]} frames - Array of base64-encoded JPEG images
  * @param {Blob} audioBlob - Audio recording blob
+ * @param {string} [inspectionId] - Optional existing inspection ID to append to
  * @returns {Promise<object>} Backend response
  */
-export async function uploadInspection(frames, audioBlob) {
+export async function uploadInspection(frames, audioBlob, inspectionId = null) {
     const formData = new FormData();
     formData.append('frames', JSON.stringify(frames));
     if (audioBlob && audioBlob.size > 0) {
         formData.append('audio', audioBlob, 'audio.webm');
+    }
+    if (inspectionId) {
+        formData.append('inspection_id', inspectionId);
     }
 
     const response = await fetch(`${API_BASE}/api/inspect`, {

@@ -61,7 +61,8 @@ function App() {
   const handleInspectionComplete = async (frames, audioBlob) => {
     console.log(`Uploading ${frames.length} frames...`);
     try {
-      const result = await uploadInspection(frames, audioBlob);
+      // Pass currentInspectionId so it appends if it already exists
+      const result = await uploadInspection(frames, audioBlob, currentInspectionId);
       console.log('Upload result:', result);
 
       if (result.status === 'processing') {
@@ -79,6 +80,13 @@ function App() {
   };
 
   const handleRecordAgain = () => {
+    setView('capture');
+    // Intentionally keep currentInspectionId so the next upload appends to it
+  };
+
+  const handleReset = () => {
+    setCurrentInspectionId(null);
+    setAnalysisResult(null);
     setView('capture');
   };
 
@@ -104,7 +112,7 @@ function App() {
       )}
 
       {view === 'report' && analysisResult?.report && (
-        <ReportView report={analysisResult.report} />
+        <ReportView report={analysisResult.report} onReset={handleReset} />
       )}
 
       {view === 'clarification' && analysisResult?.clarifications && (

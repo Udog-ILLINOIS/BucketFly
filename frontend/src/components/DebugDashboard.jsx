@@ -35,7 +35,7 @@ const MANUAL_TEMPLATE = {
 export function DebugDashboard() {
     const [inspections, setInspections] = useState([]);
     const [selectedInspection, setSelectedInspection] = useState(null);
-    const [editedData, setEditedData] = useState('');
+    const [editedData, setEditedData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [approving, setApproving] = useState(false);
@@ -89,32 +89,63 @@ export function DebugDashboard() {
     const handleSelect = (inspection) => {
         setSelectedInspection(inspection);
         if (inspection.ai_draft) {
-            setEditedData(JSON.stringify(inspection.ai_draft, null, 2));
+            // Deep copy to avoid mutating original
+            setEditedData(JSON.parse(JSON.stringify(inspection.ai_draft)));
         } else {
-            // If there's no draft (e.g. manual mode was on, or AI errored out), provide the template
-            setEditedData(JSON.stringify(MANUAL_TEMPLATE, null, 2));
+            // If there's no draft, provide the template
+            setEditedData(JSON.parse(JSON.stringify(MANUAL_TEMPLATE)));
         }
     };
 
-    const handleApprove = async () => {
+    const handleFormSubmit = async (isComplete) => {
         if (!selectedInspection || !editedData) return;
 
         try {
             setApproving(true);
-            const parsedData = JSON.parse(editedData); // Validate JSON
-            await approveInspection(selectedInspection.id, parsedData);
-            alert('Inspection approved and released to client!');
+            const finalData = { ...editedData, is_complete: isComplete };
+            await approveInspection(selectedInspection.id, finalData);
+            alert(isComplete ? 'Final Report Approved!' : 'Clarifications Requested from User!');
             setSelectedInspection(null);
             fetchInspections();
         } catch (err) {
-            if (err instanceof SyntaxError) {
-                alert('Invalid JSON format. Please fix formatting before approving.');
-            } else {
-                alert('Error approving inspection: ' + err.message);
-            }
+            alert('Error approving inspection: ' + err.message);
         } finally {
             setApproving(false);
         }
+    };
+
+    // --- FORM HELPERS ---
+    const updateEquipment = (field, val) => {
+        setEditedData(prev => ({
+            ...prev, report: { ...prev.report, equipment_info: { ...prev.report.equipment_info, [field]: val } }
+        }));
+    };
+
+    const updateChecklist = (category, itemKey, field, val) => {
+        setEditedData(prev => ({
+            ...prev, report: {
+                ...prev.report, [category]: {
+                    ...prev.report[category], [itemKey]: {
+                        ...prev.report[category][itemKey], [field]: val
+                    }
+                }
+            }
+        }));
+    };
+
+    const addClarification = () => {
+        setEditedData(prev => ({ ...prev, clarifications: [...prev.clarifications, ""] }));
+    };
+
+    const updateClarification = (idx, val) => {
+        const newClarifications = [...editedData.clarifications];
+        newClarifications[idx] = val;
+        setEditedData(prev => ({ ...prev, clarifications: newClarifications }));
+    };
+
+    const removeClarification = (idx) => {
+        const newClarifications = editedData.clarifications.filter((_, i) => i !== idx);
+        setEditedData(prev => ({ ...prev, clarifications: newClarifications }));
     };
 
     // Removed handleManualOverride
@@ -198,25 +229,98 @@ export function DebugDashboard() {
                             </div>
 
                             <div className="editor-section">
-                                <h3>Draft Report / Clarifications</h3>
-                                <p className="editor-hint">Modify the JSON below to intervene manually. Once satisfied, click Approve to release to the client.</p>
+                                <h3>Admin Control Panel</h3>
 
-                                <textarea
-                                    className="json-editor"
-                                    value={editedData}
-                                    onChange={(e) => setEditedData(e.target.value)}
-                                    disabled={selectedInspection.status === 'processing'}
-                                />
+                                {editedData && (
+                                    <div className="visual-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' }}>
+                                        <div className="form-group">
+                                            <h4>Equipment Info</h4>
+                                            {Object.entries(editedData.report.equipment_info || {}).map(([key, val]) => (
+                                                <div key={key} style={{ display: 'flex', marginBottom: '8px', alignItems: 'center' }}>
+                                                    <label style={{ width: '150px', fontWeight: 'bold' }}>{key.replace('_', ' ').toUpperCase()}:</label>
+                                                    <input
+                                                        type="text"
+                                                        value={val}
+                                                        onChange={(e) => updateEquipment(key, e.target.value)}
+                                                        style={{ flex: 1, padding: '6px' }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
 
-                                <div className="actions">
-                                    <button
-                                        className="btn-approve"
-                                        onClick={handleApprove}
-                                        disabled={approving || selectedInspection.status === 'processing' || selectedInspection.status === 'completed'}
-                                    >
-                                        {approving ? 'Approving...' : 'Approve & Release to Client'}
-                                    </button>
-                                </div>
+                                        <div className="form-group">
+                                            <h4>General Comments</h4>
+                                            <textarea
+                                                style={{ width: '100%', minHeight: '80px', padding: '8px' }}
+                                                value={editedData.report.general_info_comments || ""}
+                                                onChange={(e) => setEditedData(prev => ({ ...prev, report: { ...prev.report, general_info_comments: e.target.value } }))}
+                                            />
+                                        </div>
+
+                                        {["from_the_ground", "engine_compartment", "on_machine_outside_cab", "inside_cab"].map((category) => (
+                                            <div key={category} className="form-group">
+                                                <h4>{category.replace(/_/g, ' ').toUpperCase()}</h4>
+                                                {Object.entries(editedData.report[category] || {}).map(([itemKey, itemState]) => (
+                                                    <div key={itemKey} style={{ display: 'flex', gap: '10px', marginBottom: '8px', alignItems: 'center' }}>
+                                                        <span style={{ width: '200px' }}>{itemKey}</span>
+                                                        <select
+                                                            value={itemState.status}
+                                                            onChange={(e) => updateChecklist(category, itemKey, 'status', e.target.value)}
+                                                            style={{ padding: '4px' }}
+                                                        >
+                                                            <option value="PASS">PASS</option>
+                                                            <option value="FAIL">FAIL</option>
+                                                            <option value="MONITOR">MONITOR</option>
+                                                            <option value="N/A">N/A</option>
+                                                        </select>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Comments"
+                                                            value={itemState.comments}
+                                                            onChange={(e) => updateChecklist(category, itemKey, 'comments', e.target.value)}
+                                                            style={{ flex: 1, padding: '4px' }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
+
+                                        <div className="form-group">
+                                            <h4>Clarifications (Ask User details)</h4>
+                                            {editedData.clarifications.map((clar, idx) => (
+                                                <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={clar}
+                                                        onChange={(e) => updateClarification(idx, e.target.value)}
+                                                        style={{ flex: 1, padding: '6px' }}
+                                                        placeholder="E.g. Get a better look under the chassis"
+                                                    />
+                                                    <button onClick={() => removeClarification(idx)} style={{ padding: '6px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
+                                                </div>
+                                            ))}
+                                            <button onClick={addClarification} style={{ marginTop: '5px', padding: '6px 12px', background: '#3498db', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>+ Add Clarification Request</button>
+                                        </div>
+
+                                        <div className="actions" style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+                                            <button
+                                                style={{ background: '#f39c12', color: 'white', padding: '12px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: 1, fontWeight: 'bold' }}
+                                                onClick={() => handleFormSubmit(false)}
+                                                disabled={approving || selectedInspection.status === 'completed' || editedData.clarifications.length === 0}
+                                            >
+                                                {approving ? 'Processing...' : 'Ask User for More Info'}
+                                            </button>
+                                            <button
+                                                className="btn-approve"
+                                                onClick={() => handleFormSubmit(true)}
+                                                disabled={approving || selectedInspection.status === 'completed'}
+                                                style={{ padding: '12px 20px', flex: 1, fontWeight: 'bold' }}
+                                            >
+                                                {approving ? 'Processing...' : 'Approve Final Report'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
