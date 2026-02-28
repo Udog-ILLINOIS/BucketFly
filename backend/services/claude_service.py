@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import anthropic
+from services.training_data import GRADE_DEFINITIONS, TRAINING_EXAMPLES_TEXT, load_all_training_images
 
 
 class ClaudeService:
@@ -28,16 +29,26 @@ class ClaudeService:
         self.model = 'claude-sonnet-4-6'
         print(f'[CLAUDE] Using model: {self.model}')
 
+        # Pre-load training images for few-shot prompting
+        try:
+            self._training_images = load_all_training_images()
+            total = sum(len(v) for v in self._training_images.values())
+            print(f'[CLAUDE] Loaded {total} training images for few-shot learning')
+        except Exception as e:
+            print(f'[CLAUDE] Warning: Could not load training images: {e}')
+            self._training_images = {})
+
     # ──────────────────────────────────────────────
     # VISUAL ANALYSIS
     # ──────────────────────────────────────────────
 
-    def analyze_frames(self, frames_b64: list[str]) -> dict:
+    def analyze_frames(self, frames_b64: list[str], use_few_shot: bool = True) -> dict:
         """
         Analyze key frames from an equipment inspection.
 
         Args:
             frames_b64: List of base64-encoded JPEG images
+            use_few_shot: If True, include labeled training images for few-shot learning
 
         Returns:
             Structured analysis dict with CoT reasoning
@@ -45,6 +56,29 @@ class ClaudeService:
         start = time.time()
 
         content = []
+
+        # Few-shot: include labeled training images
+        if use_few_shot and self._training_images:
+            content.append({"type": "text", "text": "=== REFERENCE EXAMPLES (use these to calibrate your grading) ===\n"})
+            for entry in self._training_images.get("red", []):
+                raw = entry["image_b64"].split(',')[1] if ',' in entry["image_b64"] else entry["image_b64"]
+                mime = "image/png" if entry["entry"]["filename"].endswith(".png") else "image/jpeg"
+                content.append({"type": "image", "source": {"type": "base64", "media_type": mime, "data": raw}})
+                content.append({"type": "text", "text": f"[EXAMPLE \u2014 RED] {entry['entry']['component']}: {entry['entry']['reason']}\n"})
+
+            for entry in self._training_images.get("yellow", []):
+                raw = entry["image_b64"].split(',')[1] if ',' in entry["image_b64"] else entry["image_b64"]
+                mime = "image/png" if entry["entry"]["filename"].endswith(".png") else "image/jpeg"
+                content.append({"type": "image", "source": {"type": "base64", "media_type": mime, "data": raw}})
+                content.append({"type": "text", "text": f"[EXAMPLE \u2014 YELLOW] {entry['entry']['component']}: {entry['entry']['reason']}\n"})
+
+            for entry in self._training_images.get("false_positives", []):
+                raw = entry["image_b64"].split(',')[1] if ',' in entry["image_b64"] else entry["image_b64"]
+                mime = "image/png" if entry["entry"]["filename"].endswith(".png") else "image/jpeg"
+                content.append({"type": "image", "source": {"type": "base64", "media_type": mime, "data": raw}})
+                content.append({"type": "text", "text": f"[EXAMPLE \u2014 GREEN (was wrongly flagged)] {entry['entry']['component']}: {entry['entry']['why_actually_green']}\nLESSON: {entry['entry']['lesson']}\n"})
+
+            content.append({"type": "text", "text": "=== END REFERENCE EXAMPLES ===\n\n=== NOW ANALYZE THE FOLLOWING INSPECTION FRAMES ===\n"})
 
         for frame_b64 in frames_b64:
             if ',' in frame_b64:
@@ -252,7 +286,11 @@ class ClaudeService:
 # PROMPTS
 # ──────────────────────────────────────────────────────
 
-VISUAL_ANALYSIS_PROMPT = """You are a senior Caterpillar field service engineer conducting a TA1 Daily Walkaround inspection on heavy equipment.
+VISUAL_ANALYSIS_PROMPT = f"""You are a senior Caterpillar field service engineer conducting a TA1 Daily Walkaround inspection on heavy equipment.
+
+{GRADE_DEFINITIONS}
+
+{TRAINING_EXAMPLES_TEXT}
 
 Analyze the provided inspection frames using Chain of Thought reasoning.
 
@@ -260,13 +298,28 @@ STEP 1 — OBSERVE: Describe exactly what you see in the frames. Note details li
 
 STEP 2 — IDENTIFY: Identify the specific equipment component being inspected. Use standard Caterpillar terminology (e.g., "hydraulic cylinder rod", "bucket cutting edge", "air filter element", "track shoe", "engine oil dipstick", "coolant reservoir").
 
-STEP 3 — ASSESS: Evaluate the component's condition based on Caterpillar maintenance standards. Consider: Is this within normal operating condition? Is there evidence of accelerated wear? Are there safety-critical findings?
+STEP 3 — ASSESS: Evaluate the component's condition using the COLOR-CODE GRADING DEFINITIONS above.
+  - Is this a RED situation (machine must stop)?
+  - Is this YELLOW (schedule repair, operate today)?
+  - Is this GREEN (acceptable, even if showing normal wear)?
+  - Or is the image INSUFFICIENT to determine (FAIL)?
 
-STEP 4 — CONCLUDE: State your preliminary assessment. Use one of: PASS (acceptable condition), MONITOR (minor concerns, track for next inspection), FAIL (safety-critical, needs immediate attention), or UNCLEAR (cannot determine from these frames).
+  CRITICAL: Do NOT confuse normal wear, surface dirt, paint loss, or cosmetic damage with actual failures.
+  Review the FALSE POSITIVE WARNINGS above — heavy equipment gets dirty and shows wear marks. That is NORMAL and GREEN.
+  Only flag Yellow for real degradation that needs scheduled maintenance.
+  Only flag Red for genuine safety-critical failures that require immediate shutdown.
 
-Be thorough but concise. You are protecting the operator's safety."""
+STEP 4 — CONCLUDE: State your preliminary assessment:
+  - PASS = Green (acceptable condition)
+  - MONITOR = Yellow (needs scheduled repair)
+  - FAIL = Red (safety-critical, needs immediate attention)
+  - UNCLEAR = Fail (insufficient image data to classify)
 
-CROSSREF_PROMPT = """You are a senior Caterpillar TA1 inspection verifier.
+Be thorough but concise. You are protecting the operator's safety, but also protecting their productivity — do NOT ground a machine for cosmetic issues."""
+
+CROSSREF_PROMPT = f"""You are a senior Caterpillar TA1 inspection verifier.
+
+{GRADE_DEFINITIONS}
 
 You have been provided:
 1. A visual AI analysis of equipment frames (what the AI SEES)
@@ -317,16 +370,22 @@ Your job is to cross-reference these three sources, map the inspected component 
 
 STEP 1 — MAP & GRADE:
   - Identify which exact item from the checklist above is being inspected. Output it exactly as written.
-  - Grade: Green (Pass), Yellow (Monitor), Red (Fail/Action Required), None (unidentifiable)
+  - Grade using the COLOR-CODE system:
+    Green = Component is acceptable, machine can operate normally
+    Yellow = Component needs scheduled repair, but machine can operate today
+    Red = Component has critical failure, machine MUST NOT operate
+    Fail = Insufficient data/image quality to make a determination
 
 STEP 2 — COMPARE: What did the operator say vs what the AI sees vs History?
   - Do they agree or disagree?
   - Does new visual show accelerated wear vs historical baseline?
+  - REMEMBER: Dirt, dust, paint wear, surface rust, and minor cosmetic damage are NORMAL and GREEN.
 
 STEP 3 — RESOLVE & STATUS:
   - AGREE + Green -> PASS
   - AGREE + Yellow -> MONITOR
   - AGREE + Red -> FAIL
+  - Image quality too poor to assess -> INSUFFICIENT_DATA
   - DISAGREE (AI sees worse) -> Trust the AI, escalate grade, return CLARIFY with a specific question
   - AMBIGUOUS -> CLARIFY with a specific yes/no question
 
@@ -376,13 +435,18 @@ VISUAL_SCHEMA = {
             "type": "string",
             "enum": ["PASS", "MONITOR", "FAIL", "UNCLEAR"]
         },
+        "color_code": {
+            "type": "string",
+            "enum": ["Green", "Yellow", "Red", "Fail"],
+            "description": "Green=acceptable, Yellow=needs scheduled repair, Red=critical failure, Fail=insufficient data"
+        },
         "confidence": {"type": "number"},
         "concerns": {
             "type": "array",
             "items": {"type": "string"}
         }
     },
-    "required": ["chain_of_thought", "component", "condition_observations", "preliminary_status", "confidence"]
+    "required": ["chain_of_thought", "component", "condition_observations", "preliminary_status", "color_code", "confidence"]
 }
 
 CROSSREF_SCHEMA = {
@@ -390,13 +454,13 @@ CROSSREF_SCHEMA = {
     "properties": {
         "final_status": {
             "type": "string",
-            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY"]
+            "enum": ["PASS", "MONITOR", "FAIL", "CLARIFY", "INSUFFICIENT_DATA"]
         },
         "confidence": {"type": "number"},
         "checklist_mapped_item": {"type": "string"},
         "checklist_grade": {
             "type": "string",
-            "enum": ["Green", "Yellow", "Red", "None"]
+            "enum": ["Green", "Yellow", "Red", "Fail"]
         },
         "verdict_reasoning": {"type": "string"},
         "clarification_question": {"type": "string"},

@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-02-28T15:55:16.042042",
+  "training_validation": [
+    {
+      "filename": "FlatWheel.png",
+      "expected": "Red",
+      "actual": "Red",
+      "correct": true,
+      "confidence": 0.99
+    },
+    {
+      "filename": "HydraulicFluidLow.png",
+      "expected": "Red",
+      "actual": "ERROR",
+      "correct": false
+    },
+    {
+      "filename": "SeizedPin.png",
+      "expected": "Red",
+      "actual": "ERROR",
+      "correct": false
+    },
+    {
+      "filename": "BentFinsHeatExchanger.png",
+      "expected": "Yellow",
+      "actual": "ERROR",
+      "correct": false
+    },
+    {
+      "filename": "DentedSteps.png",
+      "expected": "Yellow",
+      "actual": "ERROR",
+      "correct": false
+    }
+  ],
+  "false_positive_correction": [],
+  "test_classifications": []
+}
