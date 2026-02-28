@@ -1,0 +1,200 @@
+/* ─── Live Feedback Overlay ─── */
+.live-feedback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 70px 12px 50px 12px; /* Keep clear of CAT logo (top) and tap-hint (bottom) */
+}
+
+/* ─── Top Bar ─── */
+.lf-top-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.lf-component-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border-left: 4px solid transparent;
+    max-width: 90%;
+}
+
+.lf-component-tag.lf-high {
+    border-left-color: #22c55e;
+}
+
+.lf-component-tag.lf-medium {
+    border-left-color: #f59e0b;
+}
+
+.lf-component-tag.lf-low {
+    border-left-color: #ef4444;
+}
+
+.lf-component-tag.lf-none {
+    border-left-color: #666;
+}
+
+.lf-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.lf-component-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+}
+
+.lf-confidence-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+.lf-badge-high {
+    background: rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.lf-badge-medium {
+    background: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+.lf-badge-low {
+    background: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+/* Already inspected badge */
+.lf-already-badge {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    color: #86efac;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 6px;
+    text-align: right;
+}
+
+/* ─── Center Guidance ─── */
+.lf-guidance {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 205, 0, 0.4);
+    max-width: 90%;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.lf-guidance.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.lf-guidance.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+}
+
+.lf-guidance-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.lf-guidance-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cat-yellow, #ffcd00);
+    line-height: 1.3;
+}
+
+/* ─── Bottom Bar ─── */
+.lf-bottom-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lf-progress-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.lf-progress-count {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--cat-yellow, #ffcd00);
+}
+
+.lf-progress-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.lf-missed-ticker {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.lf-missed-ticker::-webkit-scrollbar {
+    display: none;
+}
+
+.lf-missed-chip {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.lf-missed-more {
+    color: rgba(255, 205, 0, 0.8);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}

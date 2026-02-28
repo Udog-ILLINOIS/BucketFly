@@ -123,7 +123,8 @@ function App() {
       <div className="tab-content">
         {activeTab === 'record' && (
           <CaptureZone 
-            onInspectionComplete={isClarifying ? handleClarificationComplete : handleInspectionComplete} 
+            onInspectionComplete={isClarifying ? handleClarificationComplete : handleInspectionComplete}
+            checklistState={checklistState}
           />
         )}
         {activeTab === 'report' && (

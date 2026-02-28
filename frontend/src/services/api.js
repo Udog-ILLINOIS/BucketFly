@@ -77,3 +77,26 @@ export async function fetchHistory(component) {
     }
     return response.json();
 }
+
+/**
+ * Send a single frame for lightweight real-time component identification.
+ * Used during recording for live feedback overlay.
+ * 
+ * @param {string} frame - Base64-encoded JPEG image
+ * @param {object} checklistState - Current checklist state { "1.3 Bucket...": "Green", ... }
+ * @returns {Promise<object>} { component, checklist_item, confidence, confidence_label, guidance, already_inspected, items_remaining }
+ */
+export async function identifyFrame(frame, checklistState = {}) {
+    const response = await fetch(`${API_BASE}/api/identify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frame, checklist_state: checklistState }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Identify failed: ${response.status}`);
+    }
+
+    return response.json();
+}

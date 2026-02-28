@@ -312,6 +312,54 @@ class GeminiService:
 
         return {"correlations": correlations}
 
+    def identify_component(self, frame_b64: str) -> dict:
+        """
+        Lightweight, fast identification of the component visible in a single frame.
+        Used for real-time feedback during recording. No full CoT — speed is priority.
+
+        Args:
+            frame_b64: A single base64-encoded JPEG image
+
+        Returns:
+            {component, checklist_item, confidence, confidence_label, guidance}
+        """
+        start = time.time()
+
+        if ',' in frame_b64:
+            frame_b64 = frame_b64.split(',')[1]
+
+        frame_bytes = base64.b64decode(frame_b64)
+        parts = [
+            types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg"),
+            IDENTIFY_PROMPT
+        ]
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=parts,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=IDENTIFY_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {
+                "component": "Unknown",
+                "checklist_item": "None",
+                "confidence": 0.0,
+                "confidence_label": "LOW",
+                "guidance": "Cannot identify component from this angle"
+            }
+
+        result["processing_time_seconds"] = elapsed
+        return result
+
     def review_delta(self, current_analysis: dict, previous_analysis: dict) -> dict:
         """
         Perform a subjective comparison between today's analysis and the previous one.
@@ -403,6 +451,32 @@ DELTA_SCHEMA = {
         "days_since_previous": {"type": "number"}
     },
     "required": ["summary", "wear_trend", "notable_changes"]
+}
+
+IDENTIFY_PROMPT = """You are a Caterpillar field service engineer. Quickly identify the equipment component shown in this single frame.
+
+Map it to the closest item from the official TA1 checklist:
+1.1 Tires and Rims | 1.2 Bucket Cutting Edge, Tips, or Moldboard | 1.3 Bucket Tilt Cylinders and Hoses | 1.4 Bucket, Lift Cylinders and Hoses | 1.5 Lift arm attachment to frame | 1.6 Underneath of Machine | 1.7 Transmission and Transfer Gears | 1.8 Differential and Final Drive Oil | 1.9 Steps and Handrails | 1.10 Brake Air Tank; inspect | 1.11 Fuel Tank | 1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals | 1.13 Hydraulic fluid tank, inspect | 1.14 Transmission Oil | 1.15 Work Lights | 1.16 Battery & Cables | 2.1 Engine Oil Level | 2.2 Engine Coolant Level | 2.3 Check Radiator Cores for Debris | 2.4 Inspect Hoses for Cracks or Leaks | 2.5 Primary/secondary fuel filters | 2.6 All Belts | 2.7 Air Cleaner and Air Filter Service Indicator | 2.8 Overall Engine Compartment | 3.1 Steps & Handrails | 3.2 ROPS/FOPS | 3.3 Fire Extinguisher | 3.4 Windshield wipers and washers | 3.5 Side Doors | 4.1 Seat | 4.2 Seat belt and mounting | 4.3 Horn | 4.4 Backup Alarm | 4.5 Windows and Mirrors | 4.6 Cab Air Filter | 4.7 Indicators & Gauges | 4.8 Switch functionality | 4.9 Overall Cab Interior
+
+Rate your confidence (0.0 to 1.0) in the identification.
+If confidence < 0.5, provide guidance on how the operator should adjust (e.g. move closer, change angle, point at the component).
+If you cannot identify any Cat equipment component, set checklist_item to "None" and give helpful guidance.
+
+Be fast and concise."""
+
+IDENTIFY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "component": {"type": "string"},
+        "checklist_item": {"type": "string"},
+        "confidence": {"type": "number"},
+        "confidence_label": {
+            "type": "string",
+            "enum": ["HIGH", "MEDIUM", "LOW"]
+        },
+        "guidance": {"type": "string"}
+    },
+    "required": ["component", "checklist_item", "confidence", "confidence_label", "guidance"]
 }
 
 VISUAL_SCHEMA = {

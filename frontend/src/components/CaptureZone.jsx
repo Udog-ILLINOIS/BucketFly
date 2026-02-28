@@ -1,5 +1,7 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { useMediaCapture } from '../hooks/useMediaCapture';
+import { LiveFeedback } from './LiveFeedback';
+import { identifyFrame } from '../services/api';
 import './CaptureZone.css';
 
 /**
@@ -12,7 +14,9 @@ import './CaptureZone.css';
  * - done: Upload confirmation
  * - error: Error message with retry
  */
-export function CaptureZone({ onInspectionComplete }) {
+const IDENTIFY_INTERVAL_MS = 3000; // Send a frame every 3 seconds
+
+export function CaptureZone({ onInspectionComplete, checklistState = {} }) {
     const {
         status,
         frames,
@@ -23,11 +27,53 @@ export function CaptureZone({ onInspectionComplete }) {
         stopRecording,
         reset,
         attachStream,
+        getLatestFrame,
     } = useMediaCapture({ frameInterval: 500 });
 
     const [uploadStatus, setUploadStatus] = useState(null);
     const [uploadMessage, setUploadMessage] = useState('');
+    const [identification, setIdentification] = useState(null);
     const liveVideoRef = useRef(null);
+    const identifyIntervalRef = useRef(null);
+    const isIdentifyingRef = useRef(false);
+
+    // Start/stop the periodic identify loop based on recording status
+    useEffect(() => {
+        if (status === 'recording') {
+            // Start identify loop
+            identifyIntervalRef.current = setInterval(async () => {
+                if (isIdentifyingRef.current) return; // Skip if previous call still pending
+                const frame = getLatestFrame();
+                if (!frame) return;
+
+                isIdentifyingRef.current = true;
+                try {
+                    const result = await identifyFrame(frame, checklistState);
+                    setIdentification(result);
+                } catch (err) {
+                    console.warn('[IDENTIFY] Real-time identify failed:', err.message);
+                } finally {
+                    isIdentifyingRef.current = false;
+                }
+            }, IDENTIFY_INTERVAL_MS);
+        } else {
+            // Clear when not recording
+            if (identifyIntervalRef.current) {
+                clearInterval(identifyIntervalRef.current);
+                identifyIntervalRef.current = null;
+            }
+            if (status === 'idle') {
+                setIdentification(null);
+            }
+        }
+
+        return () => {
+            if (identifyIntervalRef.current) {
+                clearInterval(identifyIntervalRef.current);
+                identifyIntervalRef.current = null;
+            }
+        };
+    }, [status, getLatestFrame, checklistState]);
 
     // When status changes to 'recording', attach the stream to the visible video element
     useEffect(() => {
@@ -125,6 +171,12 @@ export function CaptureZone({ onInspectionComplete }) {
                             playsInline
                             muted
                             className="camera-preview"
+                        />
+                        {/* Live AI Feedback Overlay */}
+                        <LiveFeedback
+                            identification={identification}
+                            checklistState={checklistState}
+                            isActive={status === 'recording'}
                         />
                         {/* Recording timer */}
                         <div className="recording-timer">

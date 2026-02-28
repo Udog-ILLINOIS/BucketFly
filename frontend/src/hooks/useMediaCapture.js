@@ -231,6 +231,11 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         audioChunksRef.current = [];
     }, [stopAllStreams]);
 
+    const getLatestFrame = useCallback(() => {
+        const allFrames = framesRef.current;
+        return allFrames.length > 0 ? allFrames[allFrames.length - 1] : null;
+    }, []);
+
     return {
         status,
         frames,
@@ -241,5 +246,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         stopRecording,
         reset,
         attachStream,
+        getLatestFrame,
     };
 }
