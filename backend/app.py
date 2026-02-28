@@ -182,10 +182,95 @@ def analyze_audio():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    """
+    Full analysis pipeline: visual + audio + cross-reference.
+
+    Accepts same multipart payload as /api/inspect:
+      - frames: JSON array of base64-encoded JPEG images
+      - audio: audio blob file (optional, field name must be 'audio')
+
+    Returns: {inspection_id, frame_count, has_audio, visual_analysis,
+              audio_transcription, cross_reference, final_status}
+    """
+    try:
+        frames_json = request.form.get('frames', '[]')
+        frames = json.loads(frames_json)
+        audio_file = request.files.get('audio')
+        audio_data = audio_file.read() if audio_file else None
+
+        if not frames:
+            return jsonify({"error": "No frames provided"}), 400
+
+        inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
+        os.makedirs(inspection_dir, exist_ok=True)
+
+        # Save frames to disk for clarification reuse
+        for i, frame_b64 in enumerate(frames):
+            raw = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
+            with open(os.path.join(inspection_dir, f'frame_{i:04d}.jpg'), 'wb') as f:
+                f.write(base64.b64decode(raw))
+
+        gemini = get_gemini()
+        result = {"inspection_id": inspection_id, "frame_count": len(frames)}
+
+        # Step 1: Visual analysis
+        try:
+            visual = gemini.analyze_frames(frames)
+            result["visual_analysis"] = visual
+        except Exception as e:
+            print(f"[WARN] Visual analysis failed: {e}")
+            result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR"}
+            visual = result["visual_analysis"]
+
+        # Step 2: Audio transcription (if present)
+        audio_transcription = {}
+        has_audio = bool(audio_data and len(audio_data) > 0)
+        result["has_audio"] = has_audio
+
+        if has_audio:
+            audio_path = os.path.join(inspection_dir, 'audio.webm')
+            with open(audio_path, 'wb') as f:
+                f.write(audio_data)
+            try:
+                audio_transcription = gemini.transcribe_audio(audio_data, mime_type="audio/webm")
+                result["audio_transcription"] = audio_transcription
+            except Exception as e:
+                print(f"[WARN] Audio transcription failed: {e}")
+                result["audio_transcription"] = {"error": str(e), "full_text": ""}
+
+        # Step 3: Cross-reference
+        try:
+            cross_ref = gemini.cross_reference(visual, audio_transcription, frames)
+            result["cross_reference"] = cross_ref
+            result["final_status"] = cross_ref.get("final_status",
+                visual.get("preliminary_status", "UNCLEAR"))
+        except Exception as e:
+            print(f"[WARN] Cross-reference failed: {e}")
+            result["cross_reference"] = {"error": str(e)}
+            result["final_status"] = visual.get("preliminary_status", "UNCLEAR")
+
+        print(f"[ANALYZE] {inspection_id}: {len(frames)} frames, "
+              f"audio={'yes' if has_audio else 'no'}, "
+              f"status={result.get('final_status')}")
+
+        # Save full result to disk
+        with open(os.path.join(inspection_dir, 'analysis.json'), 'w') as f:
+            json.dump(result, f, indent=2)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"[ERROR] Analyze failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
     print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.0-flash")
+    print("  Gemini: gemini-2.5-flash")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)
