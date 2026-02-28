@@ -117,11 +117,11 @@ export function HistoryView() {
             .finally(() => setIsLoading(false));
     }, [selectedDate]);
 
-    // Build checklist state from the day's records (last grade wins per item)
+    // Build checklist state from the day's records (last/newest grade wins per item)
     const checklistState = {};
     // Also build a map of item -> record for showing detail
     const itemRecords = {};
-    [...records].reverse().forEach(record => {
+    records.forEach(record => {
         const item = record.ai_analysis?.checklist_mapped_item || record.component;
         const grade = record.ai_analysis?.checklist_grade || record.grade;
         if (item && grade && grade !== 'None') {

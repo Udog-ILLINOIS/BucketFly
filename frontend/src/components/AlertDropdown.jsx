@@ -17,12 +17,16 @@ export function AlertDropdown({ notification, onAction, onDismiss }) {
             // Auto-dismiss after 8 seconds if not a CLARIFY status
             if (notification.status !== 'CLARIFY') {
                 const timer = setTimeout(() => {
-                    handleDismiss();
+                    setIsClosing(true);
+                    setTimeout(() => {
+                        setIsVisible(false);
+                        if (onDismiss) onDismiss();
+                    }, 400);
                 }, 8000);
                 return () => clearTimeout(timer);
             }
         }
-    }, [notification]);
+    }, [notification, onDismiss]);
 
     const handleDismiss = () => {
         setIsClosing(true);
@@ -39,7 +43,7 @@ export function AlertDropdown({ notification, onAction, onDismiss }) {
 
     if (!isVisible || !notification) return null;
 
-    const { status, message, component } = notification;
+    const { status = 'FAIL', message, component } = notification;
     
     const statusIcons = {
         'FAIL': '🚨',

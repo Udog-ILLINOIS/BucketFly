@@ -272,7 +272,7 @@ def identify():
             result['existing_grade'] = None
 
         # Count remaining items
-        total_items = 35  # TA1 checklist total
+        total_items = 38  # TA1 checklist total (1.1-1.16, 2.1-2.8, 3.1-3.5, 4.1-4.9)
         inspected_count = len(checklist_state)
         result['items_remaining'] = total_items - inspected_count
         result['items_inspected'] = inspected_count

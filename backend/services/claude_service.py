@@ -36,7 +36,7 @@ class ClaudeService:
             print(f'[CLAUDE] Loaded {total} training images for few-shot learning')
         except Exception as e:
             print(f'[CLAUDE] Warning: Could not load training images: {e}')
-            self._training_images = {})
+            self._training_images = {}
 
     # ──────────────────────────────────────────────
     # VISUAL ANALYSIS

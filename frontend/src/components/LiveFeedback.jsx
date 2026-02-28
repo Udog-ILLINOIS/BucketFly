@@ -2,19 +2,40 @@ import { useState, useEffect, useRef } from 'react';
 import './LiveFeedback.css';
 
 /**
+ * Speak a message using the Web Speech API.
+ * Cancels any in-progress speech before starting.
+ */
+function speak(text) {
+    if (!text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.1;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    // Prefer a neutral English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
+        || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utterance.voice = preferred;
+    window.speechSynthesis.speak(utterance);
+}
+
+/**
  * Real-time feedback overlay rendered on top of the camera viewfinder.
  * Shows:
  *  - Component detected + confidence badge
  *  - Guidance hints (fade after 3s)
  *  - Missed items count ticker
  *  - Duplicate inspection warning
+ *  - TTS: speaks guidance and component identification aloud
  */
 export function LiveFeedback({ identification, checklistState, isActive }) {
     const [guidanceVisible, setGuidanceVisible] = useState(false);
     const guidanceTimer = useRef(null);
     const prevGuidance = useRef('');
+    const prevSpokenComponent = useRef('');
 
-    // Show guidance text when it changes, then fade it after 4s
+    // Speak guidance aloud when it changes
     useEffect(() => {
         if (!identification?.guidance) return;
         if (identification.guidance === prevGuidance.current) return;
@@ -23,15 +44,46 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         
         if (guidanceTimer.current) clearTimeout(guidanceTimer.current);
         
-        setTimeout(() => {
+        const outerTimer = setTimeout(() => {
             setGuidanceVisible(true);
             guidanceTimer.current = setTimeout(() => setGuidanceVisible(false), 4000);
         }, 0);
 
+        // Speak the guidance (e.g., "Move closer", "Image not clear")
+        const confidenceLabel = identification.confidence_label || 'LOW';
+        if (confidenceLabel !== 'HIGH') {
+            speak(identification.guidance);
+        }
+
         return () => {
+            clearTimeout(outerTimer);
             if (guidanceTimer.current) clearTimeout(guidanceTimer.current);
         };
     }, [identification?.guidance]);
+
+    // Speak component identification when a new HIGH-confidence item is detected
+    useEffect(() => {
+        if (!identification) return;
+        const item = identification.checklist_item;
+        const conf = identification.confidence_label;
+        if (!item || item === 'None' || conf !== 'HIGH') return;
+        if (item === prevSpokenComponent.current) return;
+        prevSpokenComponent.current = item;
+
+        const label = item.replace(/^\d+\.\d+\s*/, ''); // strip number prefix
+        if (identification.already_inspected) {
+            speak(`${label} — already inspected, grade ${identification.existing_grade}`);
+        } else {
+            speak(`Detected: ${label}`);
+        }
+    }, [identification?.checklist_item, identification?.confidence_label]);
+
+    // Cancel speech when leaving live view
+    useEffect(() => {
+        if (!isActive && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+    }, [isActive]);
 
     if (!isActive || !identification) return null;
 
@@ -42,7 +94,6 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         guidance,
         already_inspected: alreadyInspected,
         existing_grade: existingGrade,
-        items_inspected: itemsInspected,
     } = identification;
 
     const isNone = !checklistItem || checklistItem === 'None';
@@ -67,6 +118,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
         "4.5 Windows and Mirrors", "4.6 Cab Air Filter", "4.7 Indicators & Gauges",
         "4.8 Switch functionality", "4.9 Overall Cab Interior"
     ];
+    const inspectedCount = Object.keys(checklistState).length;
     const missedItems = allItems.filter(item => !checklistState[item]);
 
     const confidenceClass = (confidenceLabel || 'LOW').toLowerCase();
@@ -115,7 +167,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
             {/* Bottom: Missed items ticker */}
             <div className="lf-bottom-bar">
                 <div className="lf-progress-summary">
-                    <span className="lf-progress-count">{itemsInspected || 0}/{allItems.length}</span>
+                    <span className="lf-progress-count">{inspectedCount}/{allItems.length}</span>
                     <span className="lf-progress-label">inspected</span>
                 </div>
                 <div className="lf-missed-ticker">

@@ -71,7 +71,7 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
         Red: Object.values(checklistState).filter(v => v === 'Red').length,
         Yellow: Object.values(checklistState).filter(v => v === 'Yellow').length,
         Green: Object.values(checklistState).filter(v => v === 'Green').length,
-        None: Object.keys(CAT_TA1_CHECKLIST).reduce((acc, cat) => acc + CAT_TA1_CHECKLIST[cat].length, 0) - Object.keys(checklistState).length
+        None: Math.max(0, Object.keys(CAT_TA1_CHECKLIST).reduce((acc, cat) => acc + CAT_TA1_CHECKLIST[cat].length, 0) - Object.keys(checklistState).length)
     };
 
     const handleItemClick = (item) => {

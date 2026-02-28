@@ -20,12 +20,15 @@ class MemoryService:
     def __init__(self):
         api_key = os.getenv("SUPERMEMORY_API_KEY")
         if not api_key:
-            raise ValueError(
-                "SUPERMEMORY_API_KEY not set in .env — "
-                "get a free key at https://supermemory.ai"
+            print(
+                "[MEMORY] WARNING: SUPERMEMORY_API_KEY not set in .env — "
+                "running in local-only mode (no cloud memory). "
+                "Get a free key at https://supermemory.ai"
             )
-        self.client = Supermemory(api_key=api_key)
-        print("[MEMORY] Initialized Supermemory cloud service")
+            self.client = None
+        else:
+            self.client = Supermemory(api_key=api_key)
+            print("[MEMORY] Initialized Supermemory cloud service")
 
     @staticmethod
     def _machine_tag(machine_id: str) -> str:
@@ -51,6 +54,10 @@ class MemoryService:
         """
         if frames is None:
             frames = []
+
+        if not self.client:
+            print(f"[MEMORY] Skipping save (no API key): {inspection_id} / {component}")
+            return False
 
         try:
             # Build a rich text document for semantic search
@@ -98,6 +105,10 @@ class MemoryService:
                     "component": component,
                     "grade": grade,
                     "final_status": raw_analysis.get("final_status", "UNKNOWN"),
+                    "checklist_mapped_item": raw_analysis.get("checklist_mapped_item", component),
+                    "checklist_grade": raw_analysis.get("checklist_grade", grade),
+                    "verdict_reasoning": raw_analysis.get("verdict_reasoning", notes),
+                    "recommendation": raw_analysis.get("recommendation", ""),
                     "inspection_date": inspection_date,
                     "has_audio": bool(audio_transcript),
                     "frame_count": float(len(frames)),
@@ -124,6 +135,9 @@ class MemoryService:
         e.g., searching "tire" will match "Tires and Rims" records.
         """
         try:
+            if not self.client:
+                return []
+
             response = self.client.search.documents(
                 q=f"{component_query} inspection history",
                 container_tags=[self._machine_tag(machine_id)],
@@ -148,6 +162,10 @@ class MemoryService:
                     "frame_count": int(metadata.get("frame_count", 0)),
                     "ai_analysis": {
                         "final_status": metadata.get("final_status", "UNKNOWN"),
+                        "checklist_mapped_item": metadata.get("checklist_mapped_item", metadata.get("component", "Unknown")),
+                        "checklist_grade": metadata.get("checklist_grade", metadata.get("grade", "None")),
+                        "verdict_reasoning": metadata.get("verdict_reasoning", ""),
+                        "recommendation": metadata.get("recommendation", ""),
                     },
                     "content": getattr(doc, 'content', '') or "",
                     "score": getattr(doc, 'score', 0),
@@ -164,6 +182,9 @@ class MemoryService:
         Return a sorted list of distinct inspection dates (YYYY-MM-DD), newest first.
         """
         try:
+            if not self.client:
+                return []
+
             # Search broadly to get documents, extract dates from metadata
             response = self.client.documents.list(
                 container_tags=[self._machine_tag(machine_id)],
@@ -195,6 +216,9 @@ class MemoryService:
         Fetch all inspection records for a given date (YYYY-MM-DD).
         """
         try:
+            if not self.client:
+                return []
+
             # Search for all inspections on this date
             response = self.client.search.documents(
                 q=f"inspection on {date_str}",
@@ -228,6 +252,10 @@ class MemoryService:
                     "frame_count": int(metadata.get("frame_count", 0)),
                     "ai_analysis": {
                         "final_status": metadata.get("final_status", "UNKNOWN"),
+                        "checklist_mapped_item": metadata.get("checklist_mapped_item", metadata.get("component", "Unknown")),
+                        "checklist_grade": metadata.get("checklist_grade", metadata.get("grade", "None")),
+                        "verdict_reasoning": metadata.get("verdict_reasoning", ""),
+                        "recommendation": metadata.get("recommendation", ""),
                     },
                     "content": getattr(doc, 'content', '') or "",
                 })

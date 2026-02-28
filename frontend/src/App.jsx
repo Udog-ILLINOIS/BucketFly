@@ -247,7 +247,7 @@ function App() {
           <span className="tab-icon">📋</span>
           <span className="tab-label">Report</span>
           {Object.keys(checklistState).length > 0 && (
-            <span className="tab-dot" style={{ backgroundColor: 'var(--cat-yellow)' }} />
+            <span className="tab-badge">{Object.keys(checklistState).length}/38</span>
           )}
         </button>
         <button
