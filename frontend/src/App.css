@@ -86,3 +86,44 @@ body,
   border-radius: 50%;
   border: 2px solid #111;
 }
+
+/* ── Processing Overlay ──────────────────────────────────────── */
+.processing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #ffffff;
+}
+
+.processing-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #f59e0b; /* Cat yellow */
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.processing-text {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 2rem;
+}
+
+.processing-elapsed {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}
