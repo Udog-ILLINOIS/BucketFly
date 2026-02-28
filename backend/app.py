@@ -267,6 +267,88 @@ def analyze():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/clarify', methods=['POST'])
+def clarify():
+    """
+    Re-analyze with clarification context.
+
+    Accepts multipart:
+      - inspection_id: string (from prior /api/analyze response)
+      - audio: clarification audio blob
+
+    Loads original frames from disk (top 5 only — token limit guard).
+    Loads prior analysis.json for context.
+    Calls clarify_with_context() with 3-turn multi-turn history.
+    Forces MONITOR if Gemini returns CLARIFY again (CLARIFY loop guard).
+
+    Returns: {inspection_id, clarification_result, final_status}
+    """
+    try:
+        inspection_id = request.form.get('inspection_id')
+        clarification_audio = request.files.get('audio')
+
+        if not inspection_id:
+            return jsonify({"error": "inspection_id is required"}), 400
+        if not clarification_audio:
+            return jsonify({"error": "audio file is required"}), 400
+
+        inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
+        analysis_path = os.path.join(inspection_dir, 'analysis.json')
+
+        if not os.path.exists(analysis_path):
+            return jsonify({"error": f"Inspection '{inspection_id}' not found"}), 404
+
+        with open(analysis_path) as f:
+            prior_result = json.load(f)
+
+        # Load top 5 original frames from disk (raw base64, no data: prefix)
+        frame_files = sorted([
+            fname for fname in os.listdir(inspection_dir)
+            if fname.startswith('frame_') and fname.endswith('.jpg')
+        ])[:5]
+
+        frames_b64 = []
+        for fname in frame_files:
+            with open(os.path.join(inspection_dir, fname), 'rb') as f:
+                frames_b64.append(base64.b64encode(f.read()).decode())
+
+        if not frames_b64:
+            return jsonify({"error": "No frames found for this inspection"}), 404
+
+        # Get prior cross-reference result (or fall back to visual analysis)
+        original_analysis = prior_result.get("cross_reference",
+            prior_result.get("visual_analysis", {}))
+
+        clarification_audio_bytes = clarification_audio.read()
+
+        gemini = get_gemini()
+        clarify_result = gemini.clarify_with_context(
+            frames_b64,
+            original_analysis,
+            clarification_audio_bytes,
+        )
+
+        # CLARIFY loop guard — never return CLARIFY from a clarification call
+        if clarify_result.get("final_status") == "CLARIFY":
+            clarify_result["final_status"] = "MONITOR"
+            note = " [Defaulted to MONITOR: clarification audio was ambiguous]"
+            clarify_result["verdict_reasoning"] = (
+                clarify_result.get("verdict_reasoning", "") + note
+            )
+
+        print(f"[CLARIFY] {inspection_id}: final_status={clarify_result.get('final_status')}")
+
+        return jsonify({
+            "inspection_id": inspection_id,
+            "clarification_result": clarify_result,
+            "final_status": clarify_result.get("final_status"),
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] Clarify failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
