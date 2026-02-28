@@ -67,7 +67,8 @@ def seed_database():
             notes="Historical baseline (Green). Looks good.",
             raw_analysis=raw_analysis,
             audio_transcript="Everything looks completely fine.",
-            frames=[b64]
+            frames=[b64],
+            machine_id="W8210127"
         )
 
     # Process FAIL images
@@ -92,7 +93,8 @@ def seed_database():
             notes="Historical baseline (Red). Damage detected.",
             raw_analysis=raw_analysis,
             audio_transcript="I see some significant damage here.",
-            frames=[b64]
+            frames=[b64],
+            machine_id="W8210127"
         )
         
     print("\n✅ Seeding complete.")

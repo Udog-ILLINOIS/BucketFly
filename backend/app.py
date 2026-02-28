@@ -22,13 +22,13 @@ app.config['MAX_FORM_MEMORY_SIZE'] = 100 * 1024 * 1024  # 100MB per form field (
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Lazy-initialize Gemini service (avoids import errors if key not set)
+# Lazy-initialize services
 _gemini_service = None
 
 
 def get_gemini():
     global _gemini_service
-    if True:
+    if _gemini_service is None:
         from services.gemini_service import GeminiService
         _gemini_service = GeminiService()
     return _gemini_service
@@ -89,12 +89,12 @@ def analyze():
         # 3. AI Pipeline
         gemini = get_gemini()
         result = {
-            "inspection_id": inspection_id, 
+            "inspection_id": inspection_id,
             "frame_count": len(frames),
             "has_audio": has_audio
         }
 
-        # Step 3a: Visual analysis
+        # Step 3a: Visual analysis (Gemini)
         try:
             visual = gemini.analyze_frames(frames)
             result["visual_analysis"] = visual
@@ -103,7 +103,7 @@ def analyze():
             result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR"}
             visual = result["visual_analysis"]
 
-        # Step 3b: Audio transcription
+        # Step 3b: Audio transcription (Gemini)
         audio_transcription = {}
         if has_audio:
             try:
@@ -113,25 +113,23 @@ def analyze():
                 print(f"[WARN] Audio transcription failed: {e}")
                 result["audio_transcription"] = {"error": str(e), "full_text": ""}
 
-        # Step 3c: Cross-reference & History Lookup
+        # Step 3c: Cross-reference & History Lookup (Gemini)
         try:
-            # Query history from Supermemory (or mock)
             component_name = visual.get("component", "")
             history = memory.get_history(component_name) if component_name else []
-            
-            # Use the most recent entry for comparison
+
             previous_inspection = history[0] if history else None
-            
+
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
             result["cross_reference"] = cross_ref
-            result["final_status"] = cross_ref.get("final_status", 
+            result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
 
-            # Step 3d: Subjective Delta Review (Phase 1)
+            # Step 3d: Subjective Delta Review (Gemini)
             if previous_inspection:
                 try:
                     delta = gemini.review_delta(
-                        current_analysis=cross_ref, 
+                        current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {})
                     )
                     result["wear_delta"] = delta
@@ -152,6 +150,7 @@ def analyze():
             grade = result.get("cross_reference", {}).get("checklist_grade", "None")
             notes = result.get("cross_reference", {}).get("verdict_reasoning", "")
             transcript = result.get("audio_transcription", {}).get("full_text", "")
+            machine_id = data.get('machine_id', 'W8210127') if request.is_json else request.form.get('machine_id', 'W8210127')
             
             memory.save_inspection(
                 inspection_id=inspection_id,
@@ -160,7 +159,8 @@ def analyze():
                 notes=notes,
                 raw_analysis=result.get("cross_reference", {}),
                 audio_transcript=transcript,
-                frames=frames[:1] # Save first frame for visual index
+                frames=frames[:1], # Save first frame for visual index
+                machine_id=machine_id
             )
         except Exception as e:
             print(f"[WARN] Supermemory persistence failed: {e}")
@@ -212,7 +212,7 @@ def clarify():
                 with open(os.path.join(inspection_dir, file), 'rb') as f:
                     frames.append(base64.b64encode(f.read()).decode('utf-8'))
 
-        # Run clarification logic
+        # Transcribe + reason (Gemini)
         gemini = get_gemini()
         clarify_result = gemini.clarify_with_context(original_analysis, audio_data, frames)
         
@@ -236,20 +236,64 @@ def clarify():
         print(f"[ERROR] Clarify failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/api/identify', methods=['POST'])
+def identify():
+    """
+    Lightweight real-time component identification from a single frame.
+    Used during recording to give the operator live feedback.
+
+    Accepts JSON: { "frame": "<base64 JPEG>" }
+    Returns: { component, checklist_item, confidence, confidence_label, guidance }
+    """
+    try:
+        data = request.get_json()
+        frame = data.get('frame')
+        checklist_state = data.get('checklist_state', {})
+
+        if not frame:
+            return jsonify({"error": "No frame provided"}), 400
+
+        gemini = get_gemini()
+        result = gemini.identify_component(frame)
+
+        # Enrich: check if this item was already inspected today
+        checklist_item = result.get('checklist_item', 'None')
+        if checklist_item and checklist_item != 'None' and checklist_item in checklist_state:
+            result['already_inspected'] = True
+            result['existing_grade'] = checklist_state[checklist_item]
+        else:
+            result['already_inspected'] = False
+            result['existing_grade'] = None
+
+        # Count remaining items
+        total_items = 35  # TA1 checklist total
+        inspected_count = len(checklist_state)
+        result['items_remaining'] = total_items - inspected_count
+        result['items_inspected'] = inspected_count
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"[ERROR] Identify failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/history', methods=['GET'])
 def get_component_history():
     """
     Fetch history logs for a specific component from Supermemory.
-    Expects query param: ?component=X
+    Expects query param: ?component=X&machine_id=Y
     """
     component = request.args.get('component')
+    machine_id = request.args.get('machine_id', 'W8210127')
     if not component:
         return jsonify({"error": "Missing component parameter"}), 400
         
     try:
         from services.memory_service import memory
-        history = memory.get_history(component, limit=10)
-        return jsonify({"component": component, "history": history}), 200
+        history = memory.get_history(component, limit=10, machine_id=machine_id)
+        return jsonify({"component": component, "machine_id": machine_id, "history": history}), 200
     except Exception as e:
         print(f"[ERROR] History fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -257,9 +301,10 @@ def get_component_history():
 @app.route('/api/history/dates', methods=['GET'])
 def get_history_dates():
     """Return list of distinct dates that have inspection records."""
+    machine_id = request.args.get('machine_id', 'W8210127')
     try:
-        dates = memory.get_available_dates()
-        return jsonify({"dates": dates}), 200
+        dates = memory.get_available_dates(machine_id=machine_id)
+        return jsonify({"dates": dates, "machine_id": machine_id}), 200
     except Exception as e:
         print(f"[ERROR] Dates fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -269,14 +314,15 @@ def get_history_dates():
 def get_history_by_date():
     """
     Fetch all inspection records for a given date.
-    Expects query param: ?date=YYYY-MM-DD
+    Expects query param: ?date=YYYY-MM-DD&machine_id=Y
     """
     date_str = request.args.get('date')
+    machine_id = request.args.get('machine_id', 'W8210127')
     if not date_str:
         return jsonify({"error": "Missing date parameter"}), 400
     try:
-        records = memory.get_history_by_date(date_str)
-        return jsonify({"date": date_str, "records": records}), 200
+        records = memory.get_history_by_date(date_str, machine_id=machine_id)
+        return jsonify({"date": date_str, "machine_id": machine_id, "records": records}), 200
     except Exception as e:
         print(f"[ERROR] History by date failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -286,6 +332,6 @@ if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")
     print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.5-flash")
+    print("  Gemini: gemini-2.5-flash-lite")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)
