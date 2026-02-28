@@ -1,262 +1,197 @@
-/* Cat Vision-Inspect — CaptureZone Styles */
-
-/* Cat brand colors */
-:root {
-  --cat-yellow: #FFCC00;
-  --cat-yellow-dark: #FF9900;
-  --cat-gray: #333333;
-  --cat-dark: #1A1A1A;
-  --cat-white: #FFFFFF;
-  --cat-border-width: 6px;
-  --cat-accent-width: 3px;
-}
-
-/* Full-screen capture zone */
 .capture-zone {
-  width: 100vw;
-  height: 100dvh;
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  background: var(--cat-dark);
+    width: 100%;
+    height: 100%;
+    background-color: var(--cat-black);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
 }
 
-/* Cat-branded border frame */
 .cat-border {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border: var(--cat-border-width) solid var(--cat-gray);
-  box-shadow: inset 0 0 0 var(--cat-accent-width) var(--cat-yellow);
-  box-sizing: border-box;
-  overflow: hidden;
+    width: 100%;
+    height: 100%;
+    border: 4px solid #333;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Pulsing border during recording */
 .capture-zone.recording .cat-border {
-  animation: pulse-border 1.2s ease-in-out infinite alternate;
+    border-color: var(--cat-yellow);
+    box-shadow: inset 0 0 40px rgba(255, 205, 0, 0.2);
 }
 
-@keyframes pulse-border {
-  0% {
-    box-shadow: inset 0 0 0 var(--cat-accent-width) var(--cat-yellow);
-  }
-  100% {
-    box-shadow: inset 0 0 0 var(--cat-accent-width) var(--cat-yellow-dark),
-                inset 0 0 20px rgba(255, 204, 0, 0.3);
-  }
-}
-
-/* Cat logo — top left */
+/* Header Info */
 .cat-logo {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
 }
 
 .cat-logo-text {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 700;
-  font-size: 28px;
-  letter-spacing: 6px;
-  color: var(--cat-yellow);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  line-height: 1;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--cat-yellow);
+    line-height: 1;
 }
 
 .cat-logo-sub {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 400;
-  font-size: 10px;
-  letter-spacing: 4px;
-  color: var(--cat-white);
-  opacity: 0.7;
-  text-transform: uppercase;
-  margin-top: 2px;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 2px;
 }
 
-/* ── IDLE STATE ── */
+/* Screens */
 .idle-screen {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cat-dark);
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
 }
 
 .idle-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 40px;
-}
-
-/* Tap icon animation */
-.tap-icon {
-  position: relative;
-  width: 80px;
-  height: 80px;
-}
-
-.tap-circle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--cat-yellow);
-  opacity: 0.8;
-}
-
-.tap-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 2px solid var(--cat-yellow);
-  opacity: 0.4;
-  animation: ring-pulse 2s ease-in-out infinite;
-}
-
-@keyframes ring-pulse {
-  0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.4;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.2);
-    opacity: 0.1;
-  }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 300px;
 }
 
 .idle-text {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 600;
-  font-size: 22px;
-  color: var(--cat-white);
-  text-align: center;
-  margin: 0;
-  line-height: 1.3;
+    font-size: 24px;
+    font-weight: 800;
+    margin-top: 30px;
+    color: white;
+    line-height: 1.2;
 }
 
 .idle-subtext {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 400;
-  font-size: 14px;
-  color: var(--cat-white);
-  opacity: 0.5;
-  text-align: center;
-  margin: 0;
+    font-size: 14px;
+    color: #888;
+    margin-top: 15px;
 }
 
-/* ── RECORDING STATE ── */
+/* Tap Interaction Visual */
+.tap-icon {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.tap-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--cat-yellow);
+    opacity: 0.1;
+    animation: pulse-ring 2s infinite ease-in-out;
+}
+
+.tap-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 4px solid var(--cat-yellow);
+    border-radius: 50%;
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.2; }
+    50% { transform: scale(1.2); opacity: 0.4; }
+    100% { transform: scale(0.8); opacity: 0.2; }
+}
+
+/* Viewfinder */
 .viewfinder {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background: #000;
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
 .camera-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-/* Recording timer pill */
 .recording-timer {
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 8px 20px;
-  border-radius: 24px;
-  z-index: 10;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(0,0,0,0.6);
+    padding: 8px 16px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
 }
 
 .rec-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #FF3B30;
-  animation: rec-blink 1s ease-in-out infinite;
+    width: 12px;
+    height: 12px;
+    background-color: var(--status-red);
+    border-radius: 50%;
+    animation: blink 1s infinite;
 }
 
-@keyframes rec-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
 }
 
-.recording-timer span {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 600;
-  font-size: 18px;
-  color: var(--cat-white);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Tap to stop hint */
 .tap-hint {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 10;
 }
 
 .tap-hint p {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 400;
-  font-size: 13px;
-  color: var(--cat-white);
-  opacity: 0.6;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 6px 12px;
-  border-radius: 12px;
-  margin: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* ── PROCESSING / STATUS ── */
+/* Status Indicators */
 .spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(255, 204, 0, 0.2);
-  border-top-color: var(--cat-yellow);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+    width: 60px;
+    height: 60px;
+    border: 6px solid #333;
+    border-top: 6px solid var(--cat-yellow);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .check-mark {
-  font-size: 48px;
-  color: #34C759;
-  font-weight: 700;
+    font-size: 80px;
+    color: var(--status-green);
+    font-weight: 900;
 }
 
 .error-mark {
-  font-size: 48px;
-  color: #FF3B30;
-  font-weight: 700;
+    font-size: 80px;
+    color: var(--status-red);
+    font-weight: 900;
 }

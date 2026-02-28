@@ -3,11 +3,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 /**
  * Custom hook for video+audio capture with key frame extraction.
  * 
- * User decisions:
- * - Key frames extracted at ~2fps (every 500ms)
- * - Keep MORE frames than needed (err on side of caution)
- * - User-controlled recording length (no cap)
- * - Audio captured alongside video for transcription (Phase 2)
+ * Optimized for mobile:
+ * - SMARTER SAMPLING: Caps at 12 frames regardless of length.
+ * - ASYNC STOP: Ensures audio blob is ready before returning.
+ * - COMPRESSION: Uses JPEG 0.6 quality for faster field uploads.
+ * - ROBUST MEDIA: Handles varied mobile MediaRecorder mimeTypes.
  */
 export function useMediaCapture({ frameInterval = 500 } = {}) {
     const [status, setStatus] = useState('idle'); // idle | requesting | recording | processing | done | error
@@ -23,8 +23,8 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
     const timerIntervalRef = useRef(null);
     const audioChunksRef = useRef([]);
     const framesRef = useRef([]);
-    // Separate ref for the hidden video element used for frame capture
     const hiddenVideoRef = useRef(null);
+    const resolveStopRef = useRef(null);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -46,15 +46,8 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-        }
     }, []);
 
-    /**
-     * Attach stream to a video element. Call this from the component
-     * via a ref callback when the <video> element mounts.
-     */
     const attachStream = useCallback((videoElement) => {
         if (videoElement && streamRef.current) {
             videoElement.srcObject = streamRef.current;
@@ -71,7 +64,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             framesRef.current = [];
             audioChunksRef.current = [];
 
-            // Request camera + mic
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'environment',
@@ -83,7 +75,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
 
             streamRef.current = stream;
 
-            // Create a hidden video element for frame extraction (always available)
             if (!hiddenVideoRef.current) {
                 hiddenVideoRef.current = document.createElement('video');
                 hiddenVideoRef.current.setAttribute('autoplay', '');
@@ -94,22 +85,31 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             hiddenVideoRef.current.srcObject = stream;
             await hiddenVideoRef.current.play().catch(() => { });
 
-            // Create canvas for frame extraction
             if (!canvasRef.current) {
                 canvasRef.current = document.createElement('canvas');
             }
 
-            // Set up MediaRecorder for audio capture
-            let mimeType = 'video/webm';
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-                mimeType = 'video/webm;codecs=vp9';
-            } else if (MediaRecorder.isTypeSupported('video/webm')) {
-                mimeType = 'video/webm';
-            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-                mimeType = 'video/mp4';
+            // Find best supported mimeType
+            const possibleTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm',
+                'video/mp4',
+                'audio/webm',
+                '' // fallback to browser default
+            ];
+            
+            let mimeType = '';
+            for (const type of possibleTypes) {
+                if (type === '' || MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type;
+                    break;
+                }
             }
 
-            const mediaRecorder = new MediaRecorder(stream, { mimeType });
+            console.log(`[CAPTURE] Using mimeType: ${mimeType || 'default'}`);
+
+            const options = mimeType ? { mimeType } : {};
+            const mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
@@ -117,16 +117,50 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
                 }
             };
 
-            mediaRecorderRef.current = mediaRecorder;
-            mediaRecorder.start(1000); // Collect chunks every second
+            mediaRecorder.onstop = () => {
+                const audioData = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'video/webm' });
+                
+                let capturedFrames = [...framesRef.current];
+                const MAX_TOTAL_FRAMES = 12;
+                
+                if (capturedFrames.length > MAX_TOTAL_FRAMES) {
+                    const sampled = [];
+                    const step = (capturedFrames.length - 1) / (MAX_TOTAL_FRAMES - 1);
+                    for (let i = 0; i < MAX_TOTAL_FRAMES; i++) {
+                        sampled.push(capturedFrames[Math.round(i * step)]);
+                    }
+                    capturedFrames = sampled;
+                }
 
-            // Start key frame extraction at ~2fps using the hidden video
-            // USER DECISION: Keep MORE frames than needed, do NOT downsample
+                setFrames(capturedFrames);
+                setAudioBlob(audioData);
+                setStatus('done');
+
+                if (resolveStopRef.current) {
+                    resolveStopRef.current({ frames: capturedFrames, audioBlob: audioData });
+                    resolveStopRef.current = null;
+                }
+            };
+
+            mediaRecorderRef.current = mediaRecorder;
+            
+            // Start recording after a tiny delay to ensure stream is hot
+            setTimeout(() => {
+                try {
+                    if (mediaRecorder.state === 'inactive') {
+                        mediaRecorder.start(1000);
+                    }
+                } catch (e) {
+                    console.error("MediaRecorder start failed:", e);
+                    setError("Failed to start recorder: " + e.message);
+                    setStatus('error');
+                }
+            }, 100);
+
             frameIntervalRef.current = setInterval(() => {
                 captureFrame();
             }, frameInterval);
 
-            // Start recording timer
             const startTime = Date.now();
             timerIntervalRef.current = setInterval(() => {
                 setRecordingTime(Math.floor((Date.now() - startTime) / 1000));
@@ -135,13 +169,7 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             setStatus('recording');
         } catch (err) {
             console.error('Failed to start recording:', err);
-            if (err.name === 'NotAllowedError') {
-                setError('Camera and microphone permissions are required. Please allow access and try again.');
-            } else if (err.name === 'NotFoundError') {
-                setError('No camera or microphone found on this device.');
-            } else {
-                setError(`Failed to start recording: ${err.message}`);
-            }
+            setError(`Failed to start recording: ${err.message}`);
             setStatus('error');
         }
     }, [frameInterval]);
@@ -152,7 +180,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
         const canvas = canvasRef.current;
-        // Cap at 640x480 for faster uploads while keeping enough detail for AI analysis
         const maxWidth = 640;
         const maxHeight = 480;
         const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
@@ -162,64 +189,39 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Capture as JPEG with quality 0.7 (good enough for inspection)
-        const frameData = canvas.toDataURL('image/jpeg', 0.7);
+        const frameData = canvas.toDataURL('image/jpeg', 0.6);
         framesRef.current.push(frameData);
     }, []);
 
     const stopRecording = useCallback(() => {
-        if (status !== 'recording') return;
+        if (status !== 'recording') return Promise.resolve(null);
 
-        setStatus('processing');
+        return new Promise((resolve) => {
+            resolveStopRef.current = resolve;
+            setStatus('processing');
 
-        // Stop frame extraction
-        if (frameIntervalRef.current) {
-            clearInterval(frameIntervalRef.current);
-            frameIntervalRef.current = null;
-        }
+            if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-        // Stop timer
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
-        }
+            captureFrame();
 
-        // Capture one final frame
-        captureFrame();
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+            }
 
-        // Stop MediaRecorder
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-        }
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
 
-        // Stop all tracks
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-
-        // Clean up hidden video
-        if (hiddenVideoRef.current) {
-            hiddenVideoRef.current.srcObject = null;
-        }
-
-        // Build audio blob from chunks
-        const audioData = new Blob(audioChunksRef.current, { type: 'video/webm' });
-
-        // Set final state
-        const capturedFrames = [...framesRef.current];
-        setFrames(capturedFrames);
-        setAudioBlob(audioData);
-        setStatus('done');
-
-        return { frames: capturedFrames, audioBlob: audioData };
+            if (hiddenVideoRef.current) {
+                hiddenVideoRef.current.srcObject = null;
+            }
+        });
     }, [status, captureFrame]);
 
     const reset = useCallback(() => {
         stopAllStreams();
-        if (hiddenVideoRef.current) {
-            hiddenVideoRef.current.srcObject = null;
-        }
         setStatus('idle');
         setFrames([]);
         setAudioBlob(null);
@@ -238,7 +240,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         startRecording,
         stopRecording,
         reset,
-        attachStream, // Use this as ref callback on <video> element
-        stream: streamRef.current,
+        attachStream,
     };
 }

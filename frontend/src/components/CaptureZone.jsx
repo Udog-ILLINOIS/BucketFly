@@ -46,7 +46,7 @@ export function CaptureZone({ onInspectionComplete }) {
         if (status === 'idle' || status === 'error') {
             await startRecording();
         } else if (status === 'recording') {
-            const result = stopRecording();
+            const result = await stopRecording();
             if (result && onInspectionComplete) {
                 setUploadStatus('uploading');
                 setUploadMessage(`Uploading ${result.frames.length} frames...`);

@@ -311,6 +311,40 @@ class GeminiService:
 
         return {"correlations": correlations}
 
+    def review_delta(self, current_analysis: dict, previous_analysis: dict) -> dict:
+        """
+        Perform a subjective comparison between today's analysis and the previous one.
+        Returns a 'wear_delta' object.
+        """
+        start = time.time()
+
+        prompt = (
+            f"SYSTEM: You are a Caterpillar predictive maintenance expert.\n"
+            f"TASK: Compare TODAY'S inspection against YESTERDAY'S for the same component.\n"
+            f"Identify if wear is accelerating or if new issues have appeared.\n\n"
+            f"YESTERDAY'S ANALYSIS:\n{json.dumps(previous_analysis)}\n\n"
+            f"TODAY'S ANALYSIS:\n{json.dumps(current_analysis)}\n\n"
+            f"Return a JSON object with a subjective summary of the changes."
+        )
+
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=[prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=DELTA_SCHEMA,
+                temperature=0.1,
+            )
+        )
+
+        elapsed = round(time.time() - start, 2)
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            result = {"summary": "Error parsing delta analysis", "wear_trend": "UNKNOWN"}
+
+        result["processing_time_seconds"] = elapsed
+        return result
 
 # ──────────────────────────────────────────────────────
 # PROMPTS
@@ -349,10 +383,26 @@ Common components to listen for:
 
 Be precise with timestamps and exact with the spoken words. Use Caterpillar's standard terminology for component identification."""
 
-
 # ──────────────────────────────────────────────────────
 # SCHEMAS
 # ──────────────────────────────────────────────────────
+
+DELTA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "wear_trend": {
+            "type": "string", 
+            "enum": ["STABLE", "INCREASING", "ACCELERATING", "CRITICAL_CHANGE"]
+        },
+        "notable_changes": {
+            "type": "array",
+            "items": {"type": "string"}
+        },
+        "days_since_previous": {"type": "number"}
+    },
+    "required": ["summary", "wear_trend", "notable_changes"]
+}
 
 VISUAL_SCHEMA = {
     "type": "object",

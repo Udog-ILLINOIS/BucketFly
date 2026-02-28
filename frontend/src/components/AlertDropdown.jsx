@@ -1,46 +1,83 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './AlertDropdown.css';
 
 /**
- * Slides down from the top of screen when AI returns CLARIFY status.
- * Shows the AI's specific clarification question and a button to record a follow-up.
- *
- * Props:
- *   question {string} - The AI's clarification question (e.g., "Is that staining wet or dry?")
- *   onStartClarification {function} - Called when operator taps "Tap to respond"
- *   onDismiss {function} - Called after close animation completes
+ * Global iOS-style notification for critical AI findings.
+ * Slides down from top, persists for 6s or until dismissed.
  */
-export function AlertDropdown({ question, onStartClarification, onDismiss }) {
+export function AlertDropdown({ notification, onAction, onDismiss }) {
+    const [isVisible, setIsVisible] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
+
+    useEffect(() => {
+        if (notification) {
+            setIsVisible(true);
+            setIsClosing(false);
+            
+            // Auto-dismiss after 8 seconds if not a CLARIFY status
+            if (notification.status !== 'CLARIFY') {
+                const timer = setTimeout(() => {
+                    handleDismiss();
+                }, 8000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [notification]);
 
     const handleDismiss = () => {
         setIsClosing(true);
         setTimeout(() => {
+            setIsVisible(false);
             if (onDismiss) onDismiss();
-        }, 300); // match CSS animation duration
+        }, 400);
     };
 
-    const handleRespond = () => {
-        setIsClosing(true);
-        setTimeout(() => {
-            if (onStartClarification) onStartClarification();
-        }, 300);
+    const handleAction = () => {
+        if (onAction) onAction(notification);
+        handleDismiss();
+    };
+
+    if (!isVisible || !notification) return null;
+
+    const { status, message, component } = notification;
+    
+    const statusIcons = {
+        'FAIL': '🚨',
+        'CLARIFY': '⚠️',
+        'MONITOR': '🔍'
+    };
+
+    const statusLabels = {
+        'FAIL': 'CRITICAL FAILURE',
+        'CLARIFY': 'CLARIFICATION NEEDED',
+        'MONITOR': 'MONITOR ITEM'
     };
 
     return (
-        <div className={`alert-dropdown ${isClosing ? 'closing' : ''}`}>
-            <div className="alert-icon">?</div>
-            <div className="alert-content">
-                <div className="alert-label">AI needs clarification</div>
-                <div className="alert-question">{question || 'Please record a follow-up to clarify.'}</div>
-            </div>
-            <div className="alert-actions">
-                <button className="alert-record-btn" onClick={handleRespond}>
-                    Tap to respond
-                </button>
-                <button className="alert-dismiss-btn" onClick={handleDismiss}>
-                    Dismiss
-                </button>
+        <div className={`alert-wrapper ${isClosing ? 'slide-up' : 'slide-down'}`}>
+            <div className={`alert-dropdown status-${status.toLowerCase()}`}>
+                <div className="alert-main">
+                    <div className="alert-icon-ring">
+                        <span className="alert-icon-emoji">{statusIcons[status] || '📋'}</span>
+                    </div>
+                    
+                    <div className="alert-body">
+                        <div className="alert-top-row">
+                            <span className="alert-label">{statusLabels[status]}</span>
+                            <span className="alert-component">{component}</span>
+                        </div>
+                        <div className="alert-message">{message}</div>
+                    </div>
+                </div>
+
+                <div className="alert-footer">
+                    <button className="alert-btn primary" onClick={handleAction}>
+                        {status === 'CLARIFY' ? 'HOLD TO ANSWER' : 'VIEW REPORT'}
+                    </button>
+                    <button className="alert-btn secondary" onClick={handleDismiss}>
+                        DISMISS
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -2,61 +2,68 @@ import { useState } from 'react'
 import { CaptureZone } from './components/CaptureZone'
 import { ReportView } from './components/ReportView'
 import { HistoryView } from './components/HistoryView'
+import { AlertDropdown } from './components/AlertDropdown'
 import { uploadInspection } from './services/api'
 import './App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('record');
   const [lastResult, setLastResult] = useState(null);
-
-  // App-wide state for the checklist grades
-  // Gray = uninspected/no info, Green = pass, Yellow = monitor, Red = fail
   const [checklistState, setChecklistState] = useState({});
+  const [notification, setNotification] = useState(null);
 
   const handleInspectionComplete = async (frames, audioBlob) => {
     console.log(`Uploading ${frames.length} frames...`);
-    const result = await uploadInspection(frames, audioBlob);
-    console.log('Upload result:', result);
-    handleUpdateResult(result);
-
-    // Auto-switch to report tab after analysis
-    setTimeout(() => setActiveTab('report'), 500);
-    return result;
+    try {
+      const result = await uploadInspection(frames, audioBlob);
+      console.log('Upload result:', result);
+      handleUpdateResult(result);
+      return result;
+    } catch (err) {
+      console.error('Inspection failed:', err);
+      throw err;
+    }
   };
 
   const handleUpdateResult = (result) => {
     setLastResult(result);
 
-    // Update the checklist state if we got a mapped component and grade
     const crossRef = result?.cross_reference;
-    if (crossRef && crossRef.checklist_mapped_item && crossRef.checklist_grade !== "None") {
+    const finalStatus = result?.final_status;
+    const mappedItem = crossRef?.checklist_mapped_item;
+
+    // 1. Update the checklist state
+    if (mappedItem && crossRef.checklist_grade !== "None") {
       setChecklistState(prev => ({
         ...prev,
-        [crossRef.checklist_mapped_item]: crossRef.checklist_grade
+        [mappedItem]: crossRef.checklist_grade
       }));
     }
+
+    // 2. Trigger Global Alert if FAIL or CLARIFY
+    if (finalStatus === 'FAIL' || finalStatus === 'CLARIFY' || finalStatus === 'MONITOR') {
+      setNotification({
+        status: finalStatus,
+        component: mappedItem || result.visual_analysis?.component || 'Equipment Item',
+        message: finalStatus === 'CLARIFY' 
+          ? crossRef.clarification_question 
+          : crossRef.verdict_reasoning || result.wear_delta?.summary || 'Issue detected.'
+      });
+    }
+  };
+
+  const handleAlertAction = (notif) => {
+    setActiveTab('report');
+    setNotification(null);
   };
 
   return (
     <div className="app">
-      {/* Debug hidden file input for browser subagent end-to-end testing */}
-      <input
-        type="file"
-        id="debug-upload"
-        style={{ position: 'absolute', top: -1000, left: -1000 }}
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-              // Creating a mock audio blob so transcription is generated
-              const audioResponse = await fetch('/mock_audio.webm').catch(() => null);
-              const audioBlob = audioResponse ? await audioResponse.blob() : new Blob(["mock"], { type: "audio/webm" });
-              handleInspectionComplete([event.target.result], audioBlob);
-            };
-            reader.readAsDataURL(file);
-          }
-        }}
+      {/* Global Alert */}
+      <AlertDropdown 
+        notification={notification} 
+        onAction={handleAlertAction}
+        onDismiss={() => setNotification(null)}
       />
 
       {/* Tab content */}
@@ -65,9 +72,9 @@ function App() {
           <CaptureZone onInspectionComplete={handleInspectionComplete} />
         )}
         {activeTab === 'report' && (
-          <ReportView
-            result={lastResult}
-            checklistState={checklistState}
+          <ReportView 
+            result={lastResult} 
+            checklistState={checklistState} 
             onUpdateResult={handleUpdateResult}
           />
         )}
@@ -91,13 +98,8 @@ function App() {
         >
           <span className="tab-icon">📋</span>
           <span className="tab-label">Report</span>
-          {lastResult && (
-            <span className="tab-dot" style={{
-              backgroundColor: lastResult?.cross_reference?.checklist_grade === 'Green' ? '#22c55e'
-                : lastResult?.cross_reference?.checklist_grade === 'Red' ? '#ef4444'
-                  : lastResult?.cross_reference?.checklist_grade === 'Yellow' ? '#f59e0b'
-                    : '#94a3b8'
-            }} />
+          {Object.keys(checklistState).length > 0 && (
+            <span className="tab-dot" style={{ backgroundColor: 'var(--cat-yellow)' }} />
           )}
         </button>
         <button

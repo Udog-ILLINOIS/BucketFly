@@ -44,19 +44,20 @@ def health():
     })
 
 
-@app.route('/api/inspect', methods=['POST'])
-def inspect():
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
     """
-    Accept inspection data from frontend — save + analyze.
+    Full analysis pipeline: visual + audio + cross-reference to Cat checklist.
 
-    Accepts:
-    - frames: JSON array of base64-encoded JPEG images
-    - audio: audio blob file (optional)
+    Accepts same multipart payload:
+      - frames: JSON array of base64-encoded JPEG images
+      - audio: audio blob file (optional, field name must be 'audio')
 
-    Returns: saved data + Gemini analysis (visual + audio + correlation)
+    Returns: {inspection_id, frame_count, has_audio, visual_analysis,
+              audio_transcription, cross_reference, final_status}
     """
     try:
-        # Parse frames from form data or JSON body
+        # 1. Parse Input
         if request.is_json:
             data = request.get_json()
             frames = data.get('frames', [])
@@ -70,155 +71,30 @@ def inspect():
         if not frames:
             return jsonify({"error": "No frames provided"}), 400
 
-        # Create inspection directory
-        inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-        inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
-        os.makedirs(inspection_dir, exist_ok=True)
-
-        # Save frames to disk
-        saved_frames = []
-        for i, frame_b64 in enumerate(frames):
-            raw_b64 = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
-            frame_bytes = base64.b64decode(raw_b64)
-            frame_path = os.path.join(inspection_dir, f'frame_{i:04d}.jpg')
-            with open(frame_path, 'wb') as f:
-                f.write(frame_bytes)
-            saved_frames.append(f'frame_{i:04d}.jpg')
-
-        # Save audio if present
-        has_audio = False
-        if audio_data and len(audio_data) > 0:
-            audio_path = os.path.join(inspection_dir, 'audio.webm')
-            with open(audio_path, 'wb') as f:
-                f.write(audio_data)
-            has_audio = True
-
-        print(f"[INSPECT] Received inspection {inspection_id}: "
-              f"{len(saved_frames)} frames, audio={'yes' if has_audio else 'no'}")
-
-        # Run AI analysis
-        gemini = get_gemini()
-        result = {
-            "status": "analyzed",
-            "inspection_id": inspection_id,
-            "frame_count": len(saved_frames),
-            "has_audio": has_audio,
-        }
-
-        # Visual analysis
-        try:
-            visual = gemini.analyze_frames(frames)
-            result["visual_analysis"] = visual
-        except Exception as e:
-            print(f"[WARN] Visual analysis failed: {e}")
-            result["visual_analysis"] = {"error": str(e)}
-
-        # Audio transcription
-        if has_audio and audio_data:
-            try:
-                transcription = gemini.transcribe_audio(audio_data)
-                result["audio_transcription"] = transcription
-
-                # Timestamp correlation (frames at 2fps = 0.5s intervals)
-                frame_timestamps = [i * 0.5 for i in range(len(frames))]
-                correlation = gemini.correlate_timestamps(transcription, frame_timestamps)
-                result["timestamp_correlation"] = correlation
-            except Exception as e:
-                print(f"[WARN] Audio transcription failed: {e}")
-                result["audio_transcription"] = {"error": str(e)}
-
-        # Save analysis result
-        result_path = os.path.join(inspection_dir, 'analysis.json')
-        with open(result_path, 'w') as f:
-            json.dump(result, f, indent=2)
-
-        return jsonify(result), 200
-
-    except Exception as e:
-        print(f"[ERROR] Inspection failed: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/analyze/visual', methods=['POST'])
-def analyze_visual():
-    """
-    Analyze frames visually with Gemini (standalone endpoint for testing).
-
-    Accepts JSON: {"frames": ["base64...", ...]}
-    """
-    try:
-        data = request.get_json()
-        frames = data.get('frames', [])
-
-        if not frames:
-            return jsonify({"error": "No frames provided"}), 400
-
-        gemini = get_gemini()
-        result = gemini.analyze_frames(frames)
-        return jsonify(result), 200
-
-    except Exception as e:
-        print(f"[ERROR] Visual analysis failed: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/analyze/audio', methods=['POST'])
-def analyze_audio():
-    """
-    Transcribe audio with Gemini (standalone endpoint for testing).
-
-    Accepts multipart: audio file
-    """
-    try:
-        audio_file = request.files.get('audio')
-        if not audio_file:
-            return jsonify({"error": "No audio file provided"}), 400
-
-        audio_data = audio_file.read()
-        gemini = get_gemini()
-        result = gemini.transcribe_audio(audio_data)
-        return jsonify(result), 200
-
-    except Exception as e:
-        print(f"[ERROR] Audio transcription failed: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze():
-    """
-    Full analysis pipeline: visual + audio + cross-reference to Cat checklist.
-
-    Accepts same multipart payload as /api/inspect:
-      - frames: JSON array of base64-encoded JPEG images
-      - audio: audio blob file (optional, field name must be 'audio')
-
-    Returns: {inspection_id, frame_count, has_audio, visual_analysis,
-              audio_transcription, cross_reference, final_status}
-    """
-    try:
-        frames_json = request.form.get('frames', '[]')
-        frames = json.loads(frames_json)
-        audio_file = request.files.get('audio')
-        audio_data = audio_file.read() if audio_file else None
-
-        if not frames:
-            return jsonify({"error": "No frames provided"}), 400
-
+        # 2. Save Inspection to Disk (Audit Trail)
         inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
         os.makedirs(inspection_dir, exist_ok=True)
 
-        # Save frames to disk for clarification reuse
         for i, frame_b64 in enumerate(frames):
             raw = frame_b64.split(',')[1] if ',' in frame_b64 else frame_b64
             with open(os.path.join(inspection_dir, f'frame_{i:04d}.jpg'), 'wb') as f:
                 f.write(base64.b64decode(raw))
 
-        gemini = get_gemini()
-        result = {"inspection_id": inspection_id, "frame_count": len(frames)}
+        has_audio = bool(audio_data and len(audio_data) > 0)
+        if has_audio:
+            with open(os.path.join(inspection_dir, 'audio.webm'), 'wb') as f:
+                f.write(audio_data)
 
-        # Step 1: Visual analysis
+        # 3. AI Pipeline
+        gemini = get_gemini()
+        result = {
+            "inspection_id": inspection_id, 
+            "frame_count": len(frames),
+            "has_audio": has_audio
+        }
+
+        # Step 3a: Visual analysis
         try:
             visual = gemini.analyze_frames(frames)
             result["visual_analysis"] = visual
@@ -227,15 +103,9 @@ def analyze():
             result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR"}
             visual = result["visual_analysis"]
 
-        # Step 2: Audio transcription (if present)
+        # Step 3b: Audio transcription
         audio_transcription = {}
-        has_audio = bool(audio_data and len(audio_data) > 0)
-        result["has_audio"] = has_audio
-
         if has_audio:
-            audio_path = os.path.join(inspection_dir, 'audio.webm')
-            with open(audio_path, 'wb') as f:
-                f.write(audio_data)
             try:
                 audio_transcription = gemini.transcribe_audio(audio_data, mime_type="audio/webm")
                 result["audio_transcription"] = audio_transcription
@@ -243,28 +113,46 @@ def analyze():
                 print(f"[WARN] Audio transcription failed: {e}")
                 result["audio_transcription"] = {"error": str(e), "full_text": ""}
 
-        # Step 3: Cross-reference
+        # Step 3c: Cross-reference & History Lookup
         try:
-            history = memory.get_history(visual.get("component", "")) if visual.get("component") else []
+            # Query history from Supermemory (or mock)
+            component_name = visual.get("component", "")
+            history = memory.get_history(component_name) if component_name else []
+            
+            # Use the most recent entry for comparison
+            previous_inspection = history[0] if history else None
+            
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
             result["cross_reference"] = cross_ref
-            result["final_status"] = cross_ref.get("final_status",
+            result["final_status"] = cross_ref.get("final_status", 
                 visual.get("preliminary_status", "UNCLEAR"))
+
+            # Step 3d: Subjective Delta Review (Phase 1)
+            if previous_inspection:
+                try:
+                    delta = gemini.review_delta(
+                        current_analysis=cross_ref, 
+                        previous_analysis=previous_inspection.get("ai_analysis", {})
+                    )
+                    result["wear_delta"] = delta
+                    print(f"[DELTA] Found history for {component_name}: {delta.get('wear_trend')}")
+                except Exception as de:
+                    print(f"[WARN] Delta review failed: {de}")
+
         except Exception as e:
             print(f"[WARN] Cross-reference failed: {e}")
             result["cross_reference"] = {"error": str(e)}
             result["final_status"] = visual.get("preliminary_status", "UNCLEAR")
 
-        print(f"[ANALYZE] {inspection_id}: {len(frames)} frames, "
-              f"audio={'yes' if has_audio else 'no'}, "
-              f"status={result.get('final_status')}")
+        print(f"[ANALYZE] {inspection_id} completed. Status: {result.get('final_status')}")
 
-        # Save to Supermemory
+        # 4. Persistence (Supermemory)
         try:
             mapped_component = result.get("cross_reference", {}).get("checklist_mapped_item", "Unknown")
             grade = result.get("cross_reference", {}).get("checklist_grade", "None")
             notes = result.get("cross_reference", {}).get("verdict_reasoning", "")
             transcript = result.get("audio_transcription", {}).get("full_text", "")
+            
             memory.save_inspection(
                 inspection_id=inspection_id,
                 component=mapped_component,
@@ -272,12 +160,12 @@ def analyze():
                 notes=notes,
                 raw_analysis=result.get("cross_reference", {}),
                 audio_transcript=transcript,
-                frames=frames[:1] # Store just the first frame to save space
+                frames=frames[:1] # Save first frame for visual index
             )
         except Exception as e:
-            print(f"[WARN] Failed to push to Supermemory: {e}")
+            print(f"[WARN] Supermemory persistence failed: {e}")
 
-        # Save full result to disk
+        # 5. Save Analysis Log
         with open(os.path.join(inspection_dir, 'analysis.json'), 'w') as f:
             json.dump(result, f, indent=2)
 
@@ -286,6 +174,7 @@ def analyze():
     except Exception as e:
         print(f"[ERROR] Analyze failed: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/clarify', methods=['POST'])
 def clarify():

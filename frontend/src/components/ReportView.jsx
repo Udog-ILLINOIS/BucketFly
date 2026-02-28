@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react';
-import { sendClarification } from '../services/api';
+import { useState } from 'react';
 import './ReportView.css';
 
 const CAT_TA1_CHECKLIST = {
@@ -53,10 +52,6 @@ const CAT_TA1_CHECKLIST = {
 
 export function ReportView({ result, checklistState, onUpdateResult }) {
     const [expandedSection, setExpandedSection] = useState('cot');
-    const [isRecording, setIsRecording] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const mediaRecorderRef = useRef(null);
-    const audioChunksRef = useRef([]);
 
     const gradeColors = {
         'Green': '#22c55e',
@@ -77,48 +72,6 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
         Yellow: Object.values(checklistState).filter(v => v === 'Yellow').length,
         Green: Object.values(checklistState).filter(v => v === 'Green').length,
         None: Object.keys(CAT_TA1_CHECKLIST).reduce((acc, cat) => acc + CAT_TA1_CHECKLIST[cat].length, 0) - Object.keys(checklistState).length
-    };
-
-    const handleStartRecording = async () => {
-        if (!result) return;
-        try {
-            audioChunksRef.current = [];
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunksRef.current.push(e.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                stream.getTracks().forEach(t => t.stop());
-
-                setIsSubmitting(true);
-                try {
-                    const updatedResult = await sendClarification(result.inspection_id, audioBlob);
-                    if (onUpdateResult) onUpdateResult(updatedResult);
-                } catch (err) {
-                    console.error("Clarification failed", err);
-                    alert("Failed to submit clarification: " + err.message);
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            mediaRecorderRef.current = mediaRecorder;
-            mediaRecorder.start();
-            setIsRecording(true);
-        } catch (err) {
-            alert('Microphone access is required for clarification.');
-        }
-    };
-
-    const handleStopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-        }
     };
 
     return (
@@ -180,10 +133,10 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
                         const grade = checklistState[item] || 'None';
                         const color = gradeColors[grade];
                         const label = gradeLabels[grade];
-                        
+
                         // Check if this item is currently being analyzed
                         const isLatest = result?.cross_reference?.checklist_mapped_item === item;
-                        
+
                         return (
                             <div key={item} className={`pdf-list-item ${isLatest ? 'highlight' : ''}`}>
                                 <div className="item-main">
@@ -205,33 +158,6 @@ export function ReportView({ result, checklistState, onUpdateResult }) {
                 </div>
             ))}
 
-            {/* AI Clarification UI — Overlaid on top of the "PDF" if needed */}
-            {result?.final_status === 'CLARIFY' && (
-                <div className="pdf-clarify-overlay">
-                    <div className="clarify-modal">
-                        <div className="clarify-header">
-                            <span className="clarify-icon">⚠️</span>
-                            <span>Clarification Needed</span>
-                        </div>
-                        <p className="clarify-question">{result.cross_reference.clarification_question}</p>
-                        <div className="clarify-actions">
-                            {isSubmitting ? (
-                                <div className="clarify-loading">Analyzing response...</div>
-                            ) : (
-                                <button
-                                    className={`clarify-record-btn ${isRecording ? 'recording' : ''}`}
-                                    onMouseDown={handleStartRecording}
-                                    onMouseUp={handleStopRecording}
-                                    onTouchStart={handleStartRecording}
-                                    onTouchEnd={handleStopRecording}
-                                >
-                                    {isRecording ? '🎙️ Release to Send' : '🎙️ Hold to Answer'}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
