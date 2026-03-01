@@ -64,7 +64,7 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
         'Green': 'PASS',
         'Yellow': 'MONITOR',
         'Red': 'FAIL',
-        'None': 'NORMAL'
+        'None': 'NOT INSPECTED'
     };
 
     const counts = {

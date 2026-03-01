@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchHistoryDates, fetchHistoryByDate } from '../services/api';
 import '../components/ReportView.css';
 import './HistoryView.css';
@@ -63,13 +63,20 @@ const gradeLabels = {
     Green: 'PASS',
     Yellow: 'MONITOR',
     Red: 'FAIL',
-    None: 'NORMAL',
+    None: 'NOT INSPECTED',
 };
 
-function yesterday() {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
+function today() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeGrade(grade) {
+    if (!grade || grade === 'None' || grade === 'UNKNOWN') return 'None';
+    const g = grade.toLowerCase();
+    if (g === 'fail' || g === 'red') return 'Red';
+    if (g === 'monitor' || g === 'yellow') return 'Yellow';
+    if (g === 'pass' || g === 'green') return 'Green';
+    return 'None';
 }
 
 function formatTime(inspectionId) {
@@ -83,7 +90,7 @@ function formatTime(inspectionId) {
 
 export function HistoryView() {
     const [availableDates, setAvailableDates] = useState([]);
-    const [selectedDate, setSelectedDate] = useState(yesterday());
+    const [selectedDate, setSelectedDate] = useState(today());
     const [records, setRecords] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -98,24 +105,44 @@ export function HistoryView() {
             .then(data => {
                 const dates = data.dates || [];
                 setAvailableDates(dates);
-                if (dates.length > 0 && !dates.includes(yesterday())) {
+                if (dates.length > 0 && !dates.includes(today())) {
                     setSelectedDate(dates[0]);
                 }
             })
             .catch(() => {});
     }, []);
 
+    const loadRecords = useCallback(async (date, signal) => {
+        try {
+            const data = await fetchHistoryByDate(date);
+            if (!signal.aborted) {
+                setRecords(data.records || []);
+                setError(null);
+            }
+        } catch (err) {
+            if (!signal.aborted) {
+                setError(err.message);
+            }
+        } finally {
+            if (!signal.aborted) {
+                setIsLoading(false);
+            }
+        }
+    }, []);
+
     useEffect(() => {
         if (!selectedDate) return;
+        const controller = new AbortController();
         setIsLoading(true);
-        setError(null);
-        setRecords([]);
         setExpandedItem(null);
-        fetchHistoryByDate(selectedDate)
-            .then(data => setRecords(data.records || []))
-            .catch(err => setError(err.message))
-            .finally(() => setIsLoading(false));
-    }, [selectedDate]);
+        loadRecords(selectedDate, controller.signal);
+        return () => controller.abort();
+    }, [selectedDate, loadRecords]);
+
+    // Build a set of all valid checklist item names
+    const validItems = new Set(
+        Object.values(CAT_TA1_CHECKLIST).flat()
+    );
 
     // Build checklist state from the day's records (last/newest grade wins per item)
     const checklistState = {};
@@ -123,8 +150,9 @@ export function HistoryView() {
     const itemRecords = {};
     records.forEach(record => {
         const item = record.ai_analysis?.checklist_mapped_item || record.component;
-        const grade = record.ai_analysis?.checklist_grade || record.grade;
-        if (item && grade && grade !== 'None') {
+        const rawGrade = record.ai_analysis?.checklist_grade || record.grade;
+        const grade = normalizeGrade(rawGrade);
+        if (item && grade !== 'None' && validItems.has(item)) {
             checklistState[item] = grade;
             itemRecords[item] = record;
         }
@@ -153,7 +181,7 @@ export function HistoryView() {
                 >
                     {allDates.map(d => (
                         <option key={d} value={d}>
-                            {d === yesterday() ? `${d}  (Yesterday)` : d}
+                            {d === today() ? `${d}  (Today)` : d}
                         </option>
                     ))}
                     {allDates.length === 0 && (
