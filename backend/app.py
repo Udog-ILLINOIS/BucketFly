@@ -415,6 +415,134 @@ def get_history_by_date():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/analyze-upload', methods=['POST'])
+def analyze_upload():
+    """
+    Analyze a single uploaded image with a text description from the operator.
+    The text replaces the audio transcription in the normal pipeline.
+
+    Accepts multipart form:
+      - image: the image file (JPEG, PNG, etc.)
+      - description: operator's text assessment of the component
+      - machine_id (optional)
+
+    Returns: same shape as /api/analyze
+    """
+    try:
+        image_file = request.files.get('image')
+        description = request.form.get('description', '')
+
+        if not image_file:
+            return jsonify({"error": "No image provided"}), 400
+        if not description.strip():
+            return jsonify({"error": "No description provided"}), 400
+
+        # Read image and convert to base64
+        image_bytes = image_file.read()
+        frame_b64 = base64.b64encode(image_bytes).decode('utf-8')
+        frames = [frame_b64]
+
+        # Save to disk
+        inspection_id = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        inspection_dir = os.path.join(UPLOAD_DIR, inspection_id)
+        os.makedirs(inspection_dir, exist_ok=True)
+
+        with open(os.path.join(inspection_dir, 'frame_0000.jpg'), 'wb') as f:
+            f.write(image_bytes)
+        with open(os.path.join(inspection_dir, 'description.txt'), 'w') as f:
+            f.write(description)
+
+        # AI Pipeline
+        gemini = get_gemini()
+        result = {
+            "inspection_id": inspection_id,
+            "frame_count": 1,
+            "has_audio": False,
+        }
+
+        # Visual analysis
+        try:
+            visual = gemini.analyze_frames(frames)
+            result["visual_analysis"] = visual
+            result["color_code"] = visual.get("color_code", "Fail")
+        except Exception as e:
+            print(f"[WARN] Visual analysis failed: {e}")
+            result["visual_analysis"] = {"error": str(e), "preliminary_status": "UNCLEAR", "color_code": "Fail"}
+            result["color_code"] = "Fail"
+            visual = result["visual_analysis"]
+
+        # Synthetic audio transcription from text
+        audio_transcription = {
+            "full_text": description,
+            "segments": [],
+            "components_mentioned": [],
+        }
+        result["audio_transcription"] = audio_transcription
+
+        # Cross-reference with history
+        try:
+            component_name = visual.get("component", "")
+            history = memory.get_history(component_name) if component_name else []
+            previous_inspection = history[0] if history else None
+
+            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
+            result["cross_reference"] = cross_ref
+            result["final_status"] = cross_ref.get("final_status",
+                visual.get("preliminary_status", "UNCLEAR"))
+            result["color_code"] = cross_ref.get("checklist_grade",
+                visual.get("color_code", "Fail"))
+
+            if previous_inspection:
+                try:
+                    delta = gemini.review_delta(
+                        current_analysis=cross_ref,
+                        previous_analysis=previous_inspection.get("ai_analysis", {})
+                    )
+                    result["wear_delta"] = delta
+                except Exception as de:
+                    print(f"[WARN] Delta review failed: {de}")
+
+        except Exception as e:
+            print(f"[WARN] Cross-reference failed: {e}")
+            result["cross_reference"] = {"error": str(e)}
+            result["final_status"] = visual.get("preliminary_status", "UNCLEAR")
+
+        # Persistence
+        try:
+            items_evaluated = result.get("cross_reference", {}).get("items_evaluated", [])
+            machine_id = request.form.get('machine_id', 'W8210127')
+
+            for idx, item in enumerate(items_evaluated):
+                mapped_component = item.get("checklist_mapped_item", "Unknown")
+                grade = item.get("checklist_grade", "None")
+                notes = item.get("verdict_reasoning", "")
+                component_inspection_id = f"{inspection_id}_{idx}"
+
+                memory.save_inspection(
+                    inspection_id=component_inspection_id,
+                    component=mapped_component,
+                    grade=grade,
+                    notes=notes,
+                    raw_analysis=result.get("cross_reference", {}),
+                    audio_transcript=description,
+                    frames=frames[:1],
+                    machine_id=machine_id
+                )
+        except Exception as e:
+            print(f"[WARN] Supermemory persistence failed: {e}")
+
+        # Save analysis log
+        with open(os.path.join(inspection_dir, 'analysis.json'), 'w') as f:
+            json.dump(result, f, indent=2)
+
+        print(f"[UPLOAD-ANALYZE] {inspection_id} completed. Status: {result.get('final_status')}")
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"[ERROR] Upload analysis failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     print("=" * 50)
     print("  CAT VISION-INSPECT API v0.2")

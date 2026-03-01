@@ -2,8 +2,9 @@
 import { CaptureZone } from './components/CaptureZone';
 import { ReportView } from './components/ReportView';
 import { HistoryView } from './components/HistoryView';
+import { UploadInspect } from './components/UploadInspect';
 import { AlertDropdown } from './components/AlertDropdown';
-import { uploadInspection, sendClarification, saveInspection } from './services/api';
+import { uploadInspection, sendClarification, saveInspection, uploadImageInspection } from './services/api';
 import { MOCK_RESULTS } from './constants/mockData';
 import './App.css';
 
@@ -204,6 +205,16 @@ function App() {
             }}
           />
         )}
+        {activeTab === 'upload' && (
+          <UploadInspect
+            onResult={async (imageDataUrl, description) => {
+              const result = await uploadImageInspection(imageDataUrl, description);
+              handleUpdateResult(result);
+              setTimeout(() => setActiveTab('report'), 1500);
+              return result;
+            }}
+          />
+        )}
       </div>
 
       <nav className="tab-bar">
@@ -224,6 +235,11 @@ function App() {
           onClick={() => setActiveTab('history')}>
           <span className="tab-icon">🕒</span>
           <span className="tab-label">History</span>
+        </button>
+        <button className={`tab-item ${activeTab === 'upload' ? 'active' : ''}`}
+          onClick={() => setActiveTab('upload')}>
+          <span className="tab-icon">📤</span>
+          <span className="tab-label">Upload</span>
         </button>
       </nav>
     </div>

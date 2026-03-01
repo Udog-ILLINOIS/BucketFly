@@ -76,3 +76,15 @@ export async function saveInspection(inspectionId, itemsEvaluated, audioTranscri
     }),
   });
 }
+
+/** Upload a single image + text description for AI inspection. */
+export async function uploadImageInspection(imageDataUrl, description) {
+  // Convert data URL to a Blob
+  const res = await fetch(imageDataUrl);
+  const blob = await res.blob();
+
+  const fd = new FormData();
+  fd.append('image', blob, 'upload.jpg');
+  fd.append('description', description);
+  return apiFetch(`${API_BASE}/api/analyze-upload`, { method: 'POST', body: fd });
+}
