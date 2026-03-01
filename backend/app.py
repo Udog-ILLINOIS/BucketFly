@@ -705,6 +705,7 @@ def analyze_upload():
     try:
         image_file = request.files.get('image')
         description = request.form.get('description', '')
+        machine_type = request.form.get('machine_type', 'cat_ta1')
 
         if not image_file:
             return jsonify({"error": "No image provided"}), 400
