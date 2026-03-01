@@ -21,7 +21,6 @@ Designed for harsh field conditions (–10°F, heavy gloves) with a glove-friend
 - [Environment Variables](#environment-variables)
 - [Running the App](#running-the-app)
 - [API Endpoints](#api-endpoints)
-- [Demo Scenarios](#demo-scenarios)
 - [Architecture](#architecture)
 - [License](#license)
 
