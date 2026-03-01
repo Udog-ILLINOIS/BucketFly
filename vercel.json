@@ -1,15 +1,15 @@
 {
     "builds": [
         {
+            "src": "backend/app.py",
+            "use": "@vercel/python"
+        },
+        {
             "src": "frontend/package.json",
             "use": "@vercel/static-build",
             "config": {
                 "distDir": "dist"
             }
-        },
-        {
-            "src": "backend/app.py",
-            "use": "@vercel/python"
         }
     ],
     "routes": [
@@ -19,23 +19,11 @@
         },
         {
             "src": "/assets/(.*)",
-            "dest": "/frontend/dist/assets/$1"
-        },
-        {
-            "src": "/manifest.json",
-            "dest": "/frontend/dist/manifest.json"
-        },
-        {
-            "src": "/vite.svg",
-            "dest": "/frontend/dist/vite.svg"
-        },
-        {
-            "src": "/favicon.ico",
-            "dest": "/frontend/dist/favicon.ico"
+            "dest": "/frontend/assets/$1"
         },
         {
             "src": "/(.*)",
-            "dest": "/frontend/dist/index.html"
+            "dest": "/frontend/index.html"
         }
     ]
 }
