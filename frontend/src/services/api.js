@@ -1,4 +1,4 @@
-﻿const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5001');
+﻿const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://bucketfly.onrender.com' : 'http://localhost:5001');
 
 /** Shared fetch wrapper with JSON error handling. */
 async function apiFetch(url, options = {}) {
