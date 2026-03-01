@@ -2,5 +2,6 @@ flask==3.1.0
 flask-cors==5.0.1
 python-dotenv==1.0.1
 google-genai>=1.0.0
+groq>=0.18.0
 supermemory>=1.0.0
 gunicorn>=21.2.0

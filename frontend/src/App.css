@@ -68,6 +68,25 @@ body, html, #root {
   font-weight: 700;
 }
 
+.selector-divider {
+  width: 1px;
+  background: #444;
+  align-self: stretch;
+  margin: 2px 2px;
+  flex-shrink: 0;
+}
+
+.ai-provider-btn {
+  flex: 0.7;
+  font-size: 11px;
+}
+
+.ai-provider-btn.active {
+  background: #4a90d9;
+  border-color: #4a90d9;
+  color: #fff;
+}
+
 /* Tab Content Container */
 .tab-content {
   flex: 1;

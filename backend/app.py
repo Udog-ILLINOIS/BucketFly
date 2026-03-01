@@ -126,6 +126,7 @@ def normalize_items_evaluated(cross_ref: dict, machine_type: str) -> dict:
 
 # Lazy-initialize services
 _gemini_service = None
+_groq_service = None
 
 
 def get_gemini():
@@ -134,6 +135,25 @@ def get_gemini():
         from services.gemini_service import GeminiService
         _gemini_service = GeminiService()
     return _gemini_service
+
+
+def get_groq():
+    global _groq_service
+    if _groq_service is None:
+        from services.groq_service import GroqService
+        _groq_service = GroqService()
+    return _groq_service
+
+
+def get_ai_service(provider: str = None):
+    """
+    Return the AI service for the given provider string.
+    Falls back to the AI_PROVIDER env var, then to 'gemini'.
+    """
+    provider = (provider or os.getenv('AI_PROVIDER', 'gemini')).lower().strip()
+    if provider == 'groq':
+        return get_groq(), 'groq'
+    return get_gemini(), 'gemini'
 
 
 @app.route('/api/health', methods=['GET'])
@@ -191,16 +211,18 @@ def analyze():
                 f.write(audio_data)
 
         # 3. AI Pipeline
-        gemini = get_gemini()
+        ai_provider_param = data.get('ai_provider') if request.is_json else request.form.get('ai_provider')
+        ai_service, ai_provider_name = get_ai_service(ai_provider_param)
         result = {
             "inspection_id": inspection_id,
             "frame_count": len(frames),
-            "has_audio": has_audio
+            "has_audio": has_audio,
+            "ai_provider": ai_provider_name
         }
 
-        # Step 3a: Visual analysis (Gemini)
+        # Step 3a: Visual analysis
         try:
-            visual = gemini.analyze_frames(frames, machine_type=machine_type)
+            visual = ai_service.analyze_frames(frames, machine_type=machine_type)
             result["visual_analysis"] = visual
             result["color_code"] = visual.get("color_code", "Fail")
         except Exception as e:
@@ -209,24 +231,24 @@ def analyze():
             result["color_code"] = "Fail"
             visual = result["visual_analysis"]
 
-        # Step 3b: Audio transcription (Gemini)
+        # Step 3b: Audio transcription
         audio_transcription = {}
         if has_audio:
             try:
-                audio_transcription = gemini.transcribe_audio(audio_data, mime_type="audio/webm", machine_type=machine_type)
+                audio_transcription = ai_service.transcribe_audio(audio_data, mime_type="audio/webm", machine_type=machine_type)
                 result["audio_transcription"] = audio_transcription
             except Exception as e:
                 print(f"[WARN] Audio transcription failed: {e}")
                 result["audio_transcription"] = {"error": str(e), "full_text": ""}
 
-        # Step 3c: Cross-reference & History Lookup (Gemini)
+        # Step 3c: Cross-reference & History Lookup
         try:
             component_name = visual.get("component", "")
             history = memory.get_history(component_name) if component_name else []
 
             previous_inspection = history[0] if history else None
 
-            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history, machine_type=machine_type)
+            cross_ref = ai_service.cross_reference(visual, audio_transcription, frames, history, machine_type=machine_type)
             normalize_items_evaluated(cross_ref, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
@@ -235,10 +257,10 @@ def analyze():
             result["color_code"] = cross_ref.get("checklist_grade",
                 visual.get("color_code", "Fail"))
 
-            # Step 3d: Subjective Delta Review (Gemini)
+            # Step 3d: Subjective Delta Review
             if previous_inspection:
                 try:
-                    delta = gemini.review_delta(
+                    delta = ai_service.review_delta(
                         current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {})
                     )
@@ -381,9 +403,10 @@ def clarify():
                 with open(os.path.join(inspection_dir, file), 'rb') as f:
                     frames.append(base64.b64encode(f.read()).decode('utf-8'))
 
-        # Transcribe + reason (Gemini)
-        gemini = get_gemini()
-        clarify_result = gemini.clarify_with_context(original_analysis, audio_data, frames)
+        # Transcribe + reason
+        ai_provider_param = request.form.get('ai_provider')
+        ai_service, _ = get_ai_service(ai_provider_param)
+        clarify_result = ai_service.clarify_with_context(original_analysis, audio_data, frames)
         
         # Save clarification audio
         clarify_audio_path = os.path.join(inspection_dir, 'clarify_audio.webm')
@@ -424,8 +447,9 @@ def identify():
         if not frame:
             return jsonify({"error": "No frame provided"}), 400
 
-        gemini = get_gemini()
-        result = gemini.identify_component(frame, machine_type=machine_type)
+        ai_provider_param = data.get('ai_provider')
+        ai_service, _ = get_ai_service(ai_provider_param)
+        result = ai_service.identify_component(frame, machine_type=machine_type)
 
         # Normalize the returned checklist item to the exact frontend key
         raw_item = result.get('checklist_item', 'None')
@@ -570,18 +594,20 @@ def analyze_video():
         with open(video_path, 'wb') as f:
             f.write(video_bytes)
 
-        gemini = get_gemini()
+        ai_provider_param = request.form.get('ai_provider')
+        ai_service, ai_provider_name = get_ai_service(ai_provider_param)
         result = {
             "inspection_id": inspection_id,
             "has_audio": True,
             "source": "video_upload",
+            "ai_provider": ai_provider_name,
         }
 
         # 2. Transcribe audio from video → keyword timestamps (in seconds)
         audio_transcription = {}
         timestamps_ms = []
         try:
-            audio_transcription = gemini.transcribe_video(video_bytes, mime_type=mime_type, machine_type=machine_type)
+            audio_transcription = ai_service.transcribe_video(video_bytes, mime_type=mime_type, machine_type=machine_type)
             result["audio_transcription"] = audio_transcription
 
             for mention in audio_transcription.get("components_mentioned", []):
@@ -620,7 +646,7 @@ def analyze_video():
 
         # 4a. Visual analysis
         try:
-            visual = gemini.analyze_frames(frames, machine_type=machine_type)
+            visual = ai_service.analyze_frames(frames, machine_type=machine_type)
             result["visual_analysis"] = visual
             result["color_code"] = visual.get("color_code", "Fail")
         except Exception as e:
@@ -635,7 +661,7 @@ def analyze_video():
             history = memory.get_history(component_name) if component_name else []
             previous_inspection = history[0] if history else None
 
-            cross_ref = gemini.cross_reference(
+            cross_ref = ai_service.cross_reference(
                 visual, audio_transcription, frames, history, machine_type=machine_type
             )
             normalize_items_evaluated(cross_ref, machine_type)
@@ -647,7 +673,7 @@ def analyze_video():
 
             if previous_inspection:
                 try:
-                    delta = gemini.review_delta(
+                    delta = ai_service.review_delta(
                         current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {}),
                     )
@@ -728,16 +754,18 @@ def analyze_upload():
             f.write(description)
 
         # AI Pipeline
-        gemini = get_gemini()
+        ai_provider_param = request.form.get('ai_provider')
+        ai_service, ai_provider_name = get_ai_service(ai_provider_param)
         result = {
             "inspection_id": inspection_id,
             "frame_count": 1,
             "has_audio": False,
+            "ai_provider": ai_provider_name,
         }
 
         # Visual analysis
         try:
-            visual = gemini.analyze_frames(frames)
+            visual = ai_service.analyze_frames(frames)
             result["visual_analysis"] = visual
             result["color_code"] = visual.get("color_code", "Fail")
         except Exception as e:
@@ -760,7 +788,7 @@ def analyze_upload():
             history = memory.get_history(component_name) if component_name else []
             previous_inspection = history[0] if history else None
 
-            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
+            cross_ref = ai_service.cross_reference(visual, audio_transcription, frames, history)
             normalize_items_evaluated(cross_ref, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
@@ -770,7 +798,7 @@ def analyze_upload():
 
             if previous_inspection:
                 try:
-                    delta = gemini.review_delta(
+                    delta = ai_service.review_delta(
                         current_analysis=cross_ref,
                         previous_analysis=previous_inspection.get("ai_analysis", {})
                     )
@@ -821,8 +849,9 @@ def analyze_upload():
 
 if __name__ == '__main__':
     print("=" * 50)
-    print("  CAT VISION-INSPECT API v0.2")
+    print("  CAT VISION-INSPECT API v0.3")
     print("  Running on http://0.0.0.0:5001")
-    print("  Gemini: gemini-2.5-flash-lite")
+    print("  AI Providers: Gemini, Groq (Llama)")
+    print(f"  Default: {os.getenv('AI_PROVIDER', 'gemini')}")
     print("=" * 50)
     app.run(debug=True, host='0.0.0.0', port=5001)

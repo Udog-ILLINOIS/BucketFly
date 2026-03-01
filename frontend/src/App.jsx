@@ -4,7 +4,7 @@ import { ReportView } from './components/ReportView';
 import { HistoryView } from './components/HistoryView';
 import { UploadInspect } from './components/UploadInspect';
 import { AlertDropdown } from './components/AlertDropdown';
-import { uploadInspection, sendClarification, saveInspection, uploadImageInspection, uploadVideoInspection, fetchHistoryByDate, fetchHistoryDates } from './services/api';
+import { uploadInspection, sendClarification, saveInspection, uploadImageInspection, uploadVideoInspection, fetchHistoryByDate, fetchHistoryDates, setAiProvider, getAiProvider } from './services/api';
 import { MOCK_RESULTS, MOCK_RESULTS_F1TENTH } from './constants/mockData';
 import { getMachineChecklistTotal, MACHINE_LABELS } from './constants/checklist';
 import './App.css';
@@ -14,6 +14,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 function App() {
   const [activeTab, setActiveTab] = useState('record');
   const [machineType, setMachineType] = useState('cat_ta1');
+  const [aiProvider, setAiProviderState] = useState(getAiProvider());
   const [lastResult, setLastResult] = useState(null);
   const [checklistState, setChecklistState] = useState({});
   const [checklistReasoningState, setChecklistReasoningState] = useState({});
@@ -265,6 +266,16 @@ function App() {
             key={key}
             className={`machine-selector-btn ${machineType === key ? 'active' : ''}`}
             onClick={() => handleMachineChange(key)}
+          >
+            {label}
+          </button>
+        ))}
+        <span className="selector-divider" />
+        {[['gemini', 'Gemini'], ['groq', 'Groq Llama']].map(([key, label]) => (
+          <button
+            key={key}
+            className={`machine-selector-btn ai-provider-btn ${aiProvider === key ? 'active' : ''}`}
+            onClick={() => { setAiProvider(key); setAiProviderState(key); }}
           >
             {label}
           </button>

@@ -1,5 +1,14 @@
 ﻿const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://bucketfly.onrender.com' : 'http://localhost:5001');
 
+/** Currently selected AI provider. Defaults to env or 'gemini'. */
+let _aiProvider = import.meta.env.VITE_AI_PROVIDER || 'gemini';
+
+/** Set the active AI provider ('gemini' or 'groq'). */
+export function setAiProvider(provider) { _aiProvider = provider; }
+
+/** Get the active AI provider. */
+export function getAiProvider() { return _aiProvider; }
+
 /** Shared fetch wrapper with JSON error handling. */
 async function apiFetch(url, options = {}) {
     const res = await fetch(url, options);
@@ -15,6 +24,7 @@ export async function uploadInspection(frames, audioBlob, machineType = 'cat_ta1
     const fd = new FormData();
     fd.append('frames', JSON.stringify(frames));
     fd.append('machine_type', machineType);
+    fd.append('ai_provider', _aiProvider);
     if (audioBlob?.size > 0) fd.append('audio', audioBlob, 'audio.webm');
     return apiFetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd });
 }
@@ -23,6 +33,7 @@ export async function uploadInspection(frames, audioBlob, machineType = 'cat_ta1
 export async function sendClarification(inspectionId, audioBlob) {
     const fd = new FormData();
     fd.append('inspection_id', inspectionId);
+    fd.append('ai_provider', _aiProvider);
     if (audioBlob?.size > 0) fd.append('audio', audioBlob, 'audio.webm');
     return apiFetch(`${API_BASE}/api/clarify`, { method: 'POST', body: fd });
 }
@@ -42,7 +53,7 @@ export async function identifyFrame(frame, checklistState = {}, machineType = 'c
     return apiFetch(`${API_BASE}/api/identify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frame, checklist_state: checklistState, machine_type: machineType }),
+        body: JSON.stringify({ frame, checklist_state: checklistState, machine_type: machineType, ai_provider: _aiProvider }),
     });
 }
 
@@ -83,6 +94,7 @@ export async function uploadVideoInspection(videoFile, machineType = 'cat_ta1') 
     const fd = new FormData();
     fd.append('video', videoFile);
     fd.append('machine_type', machineType);
+    fd.append('ai_provider', _aiProvider);
     return apiFetch(`${API_BASE}/api/analyze-video`, { method: 'POST', body: fd });
 }
 
@@ -95,5 +107,6 @@ export async function uploadImageInspection(imageDataUrl, description) {
     const fd = new FormData();
     fd.append('image', blob, 'upload.jpg');
     fd.append('description', description);
+    fd.append('ai_provider', _aiProvider);
     return apiFetch(`${API_BASE}/api/analyze-upload`, { method: 'POST', body: fd });
 }
