@@ -15,24 +15,64 @@ function formatTime(id) {
   return t.length >= 6 ? `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}` : '';
 }
 
-export function HistoryView({ injectedRecords = [], onClearInjected }) {
+export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, workingDate }) {
   const [availableDates, setAvailableDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(today());
+  const [selectedDate, setSelectedDate] = useState(workingDate || today());
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expandedItem, setExpandedItem] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
 
-  /* Clear all records for the selected date */
+  /* Add a new day report (latest date + 1) — saves current day first */
+  const handleAddNewDay = async () => {
+    const allSorted = [...availableDates].sort();
+    const latestDate = allSorted.length > 0 ? allSorted[allSorted.length - 1] : today();
+    const nextDate = new Date(latestDate + 'T00:00:00');
+    nextDate.setDate(nextDate.getDate() + 1);
+    const nextDateStr = nextDate.toISOString().slice(0, 10);
+
+    // Save current day inspections to backend, advance workingDate, and reset live state
+    if (onNewDay) {
+      await onNewDay(nextDateStr);
+    }
+
+    if (!availableDates.includes(nextDateStr)) {
+      setAvailableDates(prev => [nextDateStr, ...prev]);
+    }
+    setRecords([]);
+    setSelectedDate(nextDateStr);
+  };
+
+  /* Clear all records for the selected date, then go back one day */
   const handleClearDay = async () => {
     if (!window.confirm(`Delete ALL inspections for ${selectedDate}? This cannot be undone.`)) return;
     setIsClearing(true);
     try {
       await clearHistoryByDate(selectedDate);
       setRecords([]);
-      if (onClearInjected) onClearInjected();
       setError(null);
+
+      // Remove the cleared date from the list and navigate to the previous day
+      const clearedDate = selectedDate;
+      const remaining = availableDates.filter(d => d !== clearedDate).sort();
+      setAvailableDates(remaining);
+
+      // Pick the most recent date before the cleared one, or fall back to the day before
+      const earlier = remaining.filter(d => d < clearedDate);
+      let newDate;
+      if (earlier.length > 0) {
+        newDate = earlier[earlier.length - 1];
+      } else {
+        const prev = new Date(clearedDate + 'T00:00:00');
+        prev.setDate(prev.getDate() - 1);
+        newDate = prev.toISOString().slice(0, 10);
+      }
+
+      setSelectedDate(newDate);
+
+      // Notify parent to update workingDate and load history into report
+      if (onClearInjected) onClearInjected(newDate);
     } catch (err) {
       setError(`Clear failed: ${err.message}`);
     } finally {
@@ -72,8 +112,9 @@ export function HistoryView({ injectedRecords = [], onClearInjected }) {
     return () => ctrl.abort();
   }, [selectedDate, loadRecords]);
 
-  /* Merge API + injected records; latest record wins per item */
-  const allRecords = [...records, ...injectedRecords];
+  /* Merge API + injected records; only show injected records on the working date */
+  const isWorkingDate = selectedDate === workingDate;
+  const allRecords = isWorkingDate ? [...records, ...injectedRecords] : records;
   const checklistState = {};
   const itemRecords = {};
 
@@ -102,9 +143,16 @@ export function HistoryView({ injectedRecords = [], onClearInjected }) {
         </select>
         <span className="test-label">{allRecords.length} inspection{allRecords.length !== 1 ? 's' : ''}</span>
         <button
+          className="new-day-btn"
+          onClick={handleAddNewDay}
+          title="Add a new day report (next day)"
+        >
+          + New Day
+        </button>
+        <button
           className="clear-day-btn"
           onClick={handleClearDay}
-          disabled={isClearing || allRecords.length === 0}
+          disabled={isClearing}
           title={`Delete all inspections for ${selectedDate}`}
         >
           {isClearing ? 'Clearing...' : 'Clear Day'}

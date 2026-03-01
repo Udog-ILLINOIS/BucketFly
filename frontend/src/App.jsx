@@ -4,9 +4,11 @@ import { ReportView } from './components/ReportView';
 import { HistoryView } from './components/HistoryView';
 import { UploadInspect } from './components/UploadInspect';
 import { AlertDropdown } from './components/AlertDropdown';
-import { uploadInspection, sendClarification, saveInspection, uploadImageInspection } from './services/api';
+import { uploadInspection, sendClarification, saveInspection, uploadImageInspection, fetchHistoryByDate } from './services/api';
 import { MOCK_RESULTS } from './constants/mockData';
 import './App.css';
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function App() {
   const [activeTab, setActiveTab] = useState('record');
@@ -16,6 +18,7 @@ function App() {
   const [notification, setNotification] = useState(null);
   const [injectedRecords, setInjectedRecords] = useState([]);
   const [isClarifying, setIsClarifying] = useState(false);
+  const [workingDate, setWorkingDate] = useState(todayStr());
   const pendingInspectionId = useRef(null);
 
   // -- Result Processing --
@@ -143,10 +146,11 @@ function App() {
     handleUpdateResult(mock);
     setActiveTab('report');
 
-    // Persist to Supermemory in the background
+    // Persist to Supermemory using workingDate so data lands on the correct day
     const items = mock.cross_reference?.items_evaluated || [];
     if (items.length > 0) {
-      const id = mock.inspection_id || `mock_${Date.now()}`;
+      const datePrefix = workingDate.replace(/-/g, '');
+      const id = `${datePrefix}_${new Date().toTimeString().slice(0,8).replace(/:/g, '')}_${String(Date.now()).slice(-6)}`;
       const transcript = mock.audio_transcription?.full_text || '';
       saveInspection(id, items, transcript).catch(err =>
         console.warn('Supermemory save failed:', err.message)
@@ -162,6 +166,42 @@ function App() {
       setActiveTab('report');
     }
     setNotification(null);
+  };
+
+  // -- New Day: save current inspections to backend, advance workingDate, reset live state --
+  const handleNewDay = async (nextDateStr) => {
+    // Persist any un-saved injected records from the current session under the current workingDate
+    if (injectedRecords.length > 0) {
+      try {
+        const datePrefix = workingDate.replace(/-/g, '');
+        const inspectionId = `${datePrefix}_${new Date().toTimeString().slice(0,8).replace(/:/g, '')}_${String(Date.now()).slice(-6)}`;
+        const itemsToSave = injectedRecords.map(rec => ({
+          checklist_mapped_item: rec.ai_analysis?.checklist_mapped_item || rec.component,
+          checklist_grade: rec.ai_analysis?.checklist_grade || rec.grade || 'None',
+          verdict_reasoning: rec.ai_analysis?.verdict_reasoning || rec.operator_notes || '',
+          recommendation: rec.ai_analysis?.recommendation || '',
+          confidence: rec.ai_analysis?.confidence || rec.confidence || 0,
+        }));
+        const transcript = injectedRecords[0]?.audio_transcript || '';
+        await saveInspection(inspectionId, itemsToSave, transcript);
+        console.log(`[NEW DAY] Saved ${itemsToSave.length} records for ${workingDate}`);
+      } catch (err) {
+        console.warn('[NEW DAY] Failed to save current day records:', err.message);
+      }
+    }
+
+    // Advance to the new working date
+    if (nextDateStr) {
+      setWorkingDate(nextDateStr);
+    }
+
+    // Reset all live inspection state for a fresh day
+    setInjectedRecords([]);
+    setChecklistState({});
+    setChecklistReasoningState({});
+    setLastResult(null);
+    setNotification(null);
+    setIsClarifying(false);
   };
 
   // -- Render --
@@ -197,12 +237,40 @@ function App() {
         {activeTab === 'history' && (
           <HistoryView
             injectedRecords={injectedRecords}
-            onClearInjected={() => {
+            workingDate={workingDate}
+            onClearInjected={async (newDate) => {
+              // Clear live state
               setInjectedRecords([]);
               setChecklistState({});
               setChecklistReasoningState({});
               setLastResult(null);
+
+              // Update working date and load the new date's history into the report
+              if (newDate) {
+                setWorkingDate(newDate);
+                try {
+                  const data = await fetchHistoryByDate(newDate);
+                  const recs = data.records || [];
+                  // Populate checklist state from history records
+                  const newChecklist = {};
+                  const newReasoning = {};
+                  recs.forEach(rec => {
+                    const item = rec.ai_analysis?.checklist_mapped_item || rec.component;
+                    const grade = rec.ai_analysis?.checklist_grade || rec.grade;
+                    if (item && grade && grade !== 'None') {
+                      newChecklist[item] = grade;
+                      newReasoning[item] = rec.ai_analysis || {};
+                    }
+                  });
+                  setChecklistState(newChecklist);
+                  setChecklistReasoningState(newReasoning);
+                  setInjectedRecords(recs);
+                } catch (err) {
+                  console.warn('Failed to load history for report:', err.message);
+                }
+              }
             }}
+            onNewDay={handleNewDay}
           />
         )}
         {activeTab === 'upload' && (
