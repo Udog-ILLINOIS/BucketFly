@@ -3,8 +3,24 @@ import { fetchHistoryDates, fetchHistoryByDate, clearHistoryByDate } from '../se
 import {
   GRADE_COLORS, GRADE_LABELS,
   normalizeGrade, countGrades,
-  getMachineChecklist, getMachineChecklistTotal, getValidItemsSet,
+  getMachineChecklist, getMachineChecklistTotal, getValidItemsSet, getAllMachineItems,
 } from '../constants/checklist';
+
+/** Score records against each machine's item list and return the better-matching type. */
+function detectMachineType(records, fallback = 'cat_ta1') {
+  if (!records || records.length === 0) return fallback;
+  const catSet = new Set(getAllMachineItems('cat_ta1'));
+  const f1Set  = new Set(getAllMachineItems('f1tenth'));
+  let catScore = 0, f1Score = 0;
+  records.forEach(rec => {
+    const item = rec.ai_analysis?.checklist_mapped_item || rec.component || '';
+    if (catSet.has(item)) catScore++;
+    if (f1Set.has(item))  f1Score++;
+  });
+  if (f1Score > catScore) return 'f1tenth';
+  if (catScore > 0)       return 'cat_ta1';
+  return fallback;
+}
 import '../components/ReportView.css';
 import './HistoryView.css';
 
@@ -120,9 +136,12 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
   const checklistState = {};
   const itemRecords = {};
 
-  const validItems = getValidItemsSet(machineType);
-  const machineChecklist = getMachineChecklist(machineType);
-  const machineTotal = getMachineChecklistTotal(machineType);
+  // Use the machine type that matches the stored records, not the current UI selection.
+  // This prevents CAT history from disappearing when the user switches to F1Tenth mode.
+  const displayMachineType = detectMachineType(records, machineType);
+  const validItems = getValidItemsSet(displayMachineType);
+  const machineChecklist = getMachineChecklist(displayMachineType);
+  const machineTotal = getMachineChecklistTotal(displayMachineType);
 
   allRecords.forEach(rec => {
     const item = rec.ai_analysis?.checklist_mapped_item || rec.component;
@@ -167,11 +186,11 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       {/* Header */}
       <div className="pdf-header">
         <div className="pdf-title-block">
-          <h1>{machineType === 'f1tenth' ? 'F1Tenth RoboRacer: Pre-Run Inspection' : 'Wheel Loader: Safety & Maintenance'}</h1>
+          <h1>{displayMachineType === 'f1tenth' ? 'F1Tenth RoboRacer: Pre-Run Inspection' : 'Wheel Loader: Safety & Maintenance'}</h1>
           <p className="pdf-subtitle">Daily &mdash; {selectedDate}</p>
         </div>
         <div className="pdf-logos">
-          {machineType === 'f1tenth'
+          {displayMachineType === 'f1tenth'
             ? <div className="logo-f1tenth">F1</div>
             : <div className="logo-cat">CAT</div>
           }
@@ -185,7 +204,7 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       </div>
 
       {/* Meta */}
-      <HistoryMeta selectedDate={selectedDate} totalRecords={allRecords.length} machineType={machineType} />
+      <HistoryMeta selectedDate={selectedDate} totalRecords={allRecords.length} machineType={displayMachineType} />
 
       {/* States: loading / error / empty */}
       {isLoading && allRecords.length === 0 && <div className="pdf-section-header">Loading...</div>}
