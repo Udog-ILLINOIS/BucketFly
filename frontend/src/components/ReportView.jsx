@@ -50,8 +50,9 @@ const CAT_TA1_CHECKLIST = {
     ]
 };
 
-export function ReportView({ result, checklistState, checklistReasoningState = {}, onInjectMock }) {
+export function ReportView({ result, checklistState, checklistReasoningState = {}, onInjectMock, mockList = [] }) {
     const [expandedItem, setExpandedItem] = useState(null);
+    const [selectedMock, setSelectedMock] = useState(0);
 
     const gradeColors = {
         'Green': '#22c55e',
@@ -67,6 +68,21 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
         'None': 'NOT INSPECTED'
     };
 
+    // Derive the overall grade for the "General" circle from the latest result
+    const generalGrade = (() => {
+        if (!result) return 'None';
+        // Try cross_reference top-level grade first
+        if (result.cross_reference?.checklist_grade) return result.cross_reference.checklist_grade;
+        // Fall back to the first evaluated item's grade
+        const firstItem = result.cross_reference?.items_evaluated?.[0];
+        if (firstItem?.checklist_grade) return firstItem.checklist_grade;
+        // Map final_status to a grade
+        const statusMap = { PASS: 'Green', FAIL: 'Red', MONITOR: 'Yellow' };
+        return statusMap[result.final_status] || 'None';
+    })();
+
+    const generalLabel = gradeLabels[generalGrade] || result?.final_status || 'PENDING';
+
     const counts = {
         Red: Object.values(checklistState).filter(v => v === 'Red').length,
         Yellow: Object.values(checklistState).filter(v => v === 'Yellow').length,
@@ -81,10 +97,20 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
     return (
         <div className="pdf-container">
             {/* Dev Test Bar */}
-            {onInjectMock && (
+            {onInjectMock && mockList.length > 0 && (
                 <div className="test-bar">
-                    <button className="test-btn" onClick={onInjectMock}>
-                        Inject Mock Result
+                    <select
+                        className="history-date-select"
+                        value={selectedMock}
+                        onChange={e => setSelectedMock(Number(e.target.value))}
+                        style={{ flex: 1, maxWidth: 280 }}
+                    >
+                        {mockList.map((mock, i) => (
+                            <option key={i} value={i}>{mock.label || `Mock ${i + 1}`}</option>
+                        ))}
+                    </select>
+                    <button className="test-btn" onClick={() => onInjectMock(selectedMock)}>
+                        Inject
                     </button>
                     <span className="test-label">DEV TEST</span>
                 </div>
@@ -129,9 +155,9 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
             <div className="pdf-section-header">General Info & Comments</div>
             <div className="pdf-list-item">
                 <div className="item-main">
-                    <span className="item-dot" style={{ backgroundColor: result ? gradeColors[result.cross_reference?.checklist_grade || 'None'] : '#e5e7eb' }}></span>
+                    <span className="item-dot" style={{ backgroundColor: gradeColors[generalGrade] }}></span>
                     <span className="item-text">General Info/Comments</span>
-                    <span className="item-status">{result ? (gradeLabels[result.cross_reference?.checklist_grade] || result.final_status || 'PENDING') : 'PENDING'}</span>
+                    <span className="item-status">{result ? generalLabel : 'PENDING'}</span>
                 </div>
                 <div className="item-comment">
                     {result

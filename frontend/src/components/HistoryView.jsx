@@ -88,7 +88,7 @@ function formatTime(inspectionId) {
     return `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}`;
 }
 
-export function HistoryView() {
+export function HistoryView({ injectedRecords = [] }) {
     const [availableDates, setAvailableDates] = useState([]);
     const [selectedDate, setSelectedDate] = useState(today());
     const [records, setRecords] = useState([]);
@@ -139,21 +139,29 @@ export function HistoryView() {
         return () => controller.abort();
     }, [selectedDate, loadRecords]);
 
+    // Merge injected (mock/live) records with API records
+    const allRecords = [...records, ...injectedRecords];
+
     // Build a set of all valid checklist item names
     const validItems = new Set(
         Object.values(CAT_TA1_CHECKLIST).flat()
     );
 
-    // Build checklist state from the day's records (last/newest grade wins per item)
+    // Build checklist state from the day's records
+    // Newer inspections override older ones (last record wins)
     const checklistState = {};
+    const itemConfidence = {};
     // Also build a map of item -> record for showing detail
     const itemRecords = {};
-    records.forEach(record => {
+    allRecords.forEach(record => {
         const item = record.ai_analysis?.checklist_mapped_item || record.component;
         const rawGrade = record.ai_analysis?.checklist_grade || record.grade;
         const grade = normalizeGrade(rawGrade);
+        const confidence = record.ai_analysis?.confidence || record.confidence || 0;
         if (item && grade !== 'None' && validItems.has(item)) {
+            // Latest record for this item always wins
             checklistState[item] = grade;
+            itemConfidence[item] = confidence;
             itemRecords[item] = record;
         }
     });
@@ -188,7 +196,7 @@ export function HistoryView() {
                         <option value={selectedDate}>{selectedDate}</option>
                     )}
                 </select>
-                <span className="test-label">{records.length} inspection{records.length !== 1 ? 's' : ''}</span>
+                <span className="test-label">{allRecords.length} inspection{allRecords.length !== 1 ? 's' : ''}</span>
             </div>
 
             {/* PDF Header */}
@@ -217,7 +225,7 @@ export function HistoryView() {
                 <div className="meta-item"><span className="meta-label">Make</span><span className="meta-value">CATERPILLAR</span></div>
                 <div className="meta-item"><span className="meta-label">Work Order</span><span className="meta-value">FW12076</span></div>
                 <div className="meta-item"><span className="meta-label">Model</span><span className="meta-value">982</span></div>
-                <div className="meta-item"><span className="meta-label">Total Inspections</span><span className="meta-value">{records.length}</span></div>
+                <div className="meta-item"><span className="meta-label">Total Inspections</span><span className="meta-value">{allRecords.length}</span></div>
                 <div className="meta-item"><span className="meta-label">Equipment Family</span><span className="meta-value">Medium Wheel Loader</span></div>
                 <div className="meta-item"><span className="meta-label">Inspector</span><span className="meta-value">AI VISION AGENT</span></div>
                 <div className="meta-item"><span className="meta-label">Asset ID</span><span className="meta-value">FL-3062</span></div>
@@ -225,15 +233,15 @@ export function HistoryView() {
             </div>
 
             {/* Loading / Empty states */}
-            {isLoading && (
+            {isLoading && allRecords.length === 0 && (
                 <div className="pdf-section-header">Loading...</div>
             )}
-            {!isLoading && error && (
+            {!isLoading && error && allRecords.length === 0 && (
                 <div className="pdf-list-item">
                     <div className="item-comment" style={{ color: '#ef4444' }}>Error: {error}</div>
                 </div>
             )}
-            {!isLoading && !error && records.length === 0 && (
+            {!isLoading && !error && allRecords.length === 0 && (
                 <>
                     <div className="pdf-section-header">General Info & Comments</div>
                     <div className="pdf-list-item">
@@ -247,7 +255,7 @@ export function HistoryView() {
                 </>
             )}
 
-            {!isLoading && !error && records.length > 0 && (
+            {allRecords.length > 0 && (
                 <>
                     {/* General Info */}
                     <div className="pdf-section-header">General Info & Comments</div>
@@ -258,7 +266,7 @@ export function HistoryView() {
                             <span className="item-status">{counts.Red > 0 ? 'FAIL' : counts.Yellow > 0 ? 'MONITOR' : 'PASS'}</span>
                         </div>
                         <div className="item-comment">
-                            {records.length} inspection{records.length !== 1 ? 's' : ''} completed on {selectedDate}.
+                            {allRecords.length} inspection{allRecords.length !== 1 ? 's' : ''} completed on {selectedDate}.
                             {counts.Red > 0 ? ` ${counts.Red} item(s) require immediate attention.` : ''}
                             {counts.Yellow > 0 ? ` ${counts.Yellow} item(s) flagged for monitoring.` : ''}
                             {counts.Green > 0 && counts.Red === 0 && counts.Yellow === 0 ? ' All inspected items passed.' : ''}
