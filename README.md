@@ -199,7 +199,7 @@ Open **http://localhost:5173** in a mobile browser (or use Chrome DevTools devic
 
 ## Demo Scenarios
 
-The app is designed around three key demo scenarios using a Cat 320 Excavator / Cat 950 Wheel Loader:
+The app is designed around three key demo scenarios using a Cat Wheel Loader:
 
 ### Scenario A: Hydraulic Leak Detection (AI Override)
 The operator says "looks good," but the AI detects dark fluid pooling at a cylinder seal and **overrides** the user's assessment → **FAIL**.
