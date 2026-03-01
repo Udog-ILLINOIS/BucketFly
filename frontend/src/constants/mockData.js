@@ -286,4 +286,62 @@ export const MOCK_RESULTS = [
       checklist_mapping_reasoning: 'Maps to cab interior items: 4.1, 4.3, 4.5, 4.7, 4.9.',
     },
   ),
+
+  mock(
+    'Hydraulic Oil Indicator — FAIL (Red)', 'mock-009', 'FAIL',
+    'Hydraulic Oil Level Indicator', 0.96,
+    ['Hydraulic oil level below the red indicator line', 'Sight glass shows critically low fluid', 'Dark discoloration in remaining oil'],
+    ['Risk of hydraulic pump cavitation', 'Potential system damage if operated'],
+    {
+      observations: 'The hydraulic oil sight glass shows fluid level well below the red minimum indicator line.',
+      component_identification: 'Hydraulic oil level sight glass and indicator on a Caterpillar 982 Medium Wheel Loader.',
+      condition_assessment: 'Critical finding. Hydraulic oil is below the red service line, indicating severe fluid loss or consumption.',
+      conclusion: 'FAIL — Hydraulic oil level is critically below the red indicator line. Machine must not be operated.',
+    },
+    {
+      text: "Hydraulic oil is way below the red line on the sight glass.",
+      components: [{ name: 'hydraulic oil indicator', timestamp: 0.8 }],
+    },
+    [{
+      checklist_mapped_item: '1.13 Hydraulic fluid tank, inspect',
+      checklist_grade: 'Red',
+      verdict_reasoning: 'Both visual analysis and operator confirm hydraulic oil is critically below the red indicator line. Immediate action required before operation.',
+      recommendation: 'Do not operate machine. Inspect hydraulic system for leaks. Check all hose connections, cylinder seals, and pump fittings. Top off with CAT HYDO Advanced 10W fluid and investigate root cause of fluid loss.',
+    }],
+    {
+      audio_says: 'Operator reports hydraulic oil is well below the red line on the sight glass.',
+      visual_shows: 'AI vision confirms hydraulic fluid level is critically below the red minimum indicator line.',
+      comparison: 'AGREE — Both operator and AI confirm critically low hydraulic oil below the red service line.',
+      checklist_mapping_reasoning: 'Maps directly to checklist item 1.13 Hydraulic fluid tank, inspect.',
+    },
+  ),
+
+  mock(
+    'Steps & Handrails — PASS (Green)', 'mock-010', 'PASS',
+    'Steps and Handrails', 0.95,
+    ['Steps are clean and free of debris', 'Handrails securely bolted', 'Anti-slip tread intact', 'No visible corrosion or damage'],
+    [],
+    {
+      observations: 'Steps and handrails are in excellent condition. Anti-slip tread is intact across all steps. Handrail mounting bolts are tight with no play.',
+      component_identification: 'Access steps and handrails on a Caterpillar 982 Medium Wheel Loader.',
+      condition_assessment: 'All steps and handrails pass inspection. No safety concerns.',
+      conclusion: 'PASS — Steps and handrails are secure, clean, and in good condition.',
+    },
+    {
+      text: 'Steps and handrails look good. Everything is solid, no loose bolts, treads are fine.',
+      components: [{ name: 'steps and handrails', timestamp: 0.5 }],
+    },
+    [{
+      checklist_mapped_item: '1.9 Steps and Handrails',
+      checklist_grade: 'Green',
+      verdict_reasoning: 'Visual analysis and operator both confirm steps and handrails are in good condition. Anti-slip tread is intact, mounting hardware is secure, and no corrosion or damage detected.',
+      recommendation: 'No action required. Continue routine inspection schedule.',
+    }],
+    {
+      audio_says: 'Operator confirms steps.',
+      visual_shows: 'AI vision confirms clean steps with intact anti-slip tread and securely mounted handrails.',
+      comparison: 'AGREE — Both operator and AI confirm steps and handrails are in good condition.',
+      checklist_mapping_reasoning: 'Maps directly to checklist item 1.9 Steps and Handrails.',
+    },
+  ),
 ];

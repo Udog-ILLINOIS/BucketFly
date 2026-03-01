@@ -87,6 +87,15 @@ export function normalizeGrade(grade) {
   return 'None';
 }
 
+/** Derive the worst (most severe) grade from a checklistState. Red > Yellow > Green > None. */
+export function worstGrade(checklistState) {
+  const grades = Object.values(checklistState);
+  if (grades.includes('Red')) return 'Red';
+  if (grades.includes('Yellow')) return 'Yellow';
+  if (grades.includes('Green')) return 'Green';
+  return 'None';
+}
+
 /** Count grades in a checklistState object → { Red, Yellow, Green, None }. */
 export function countGrades(checklistState) {
   const values = Object.values(checklistState);

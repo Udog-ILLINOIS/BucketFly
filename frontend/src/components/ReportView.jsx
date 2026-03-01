@@ -1,24 +1,31 @@
 ﻿import { useState } from 'react';
-import { CAT_TA1_CHECKLIST, GRADE_COLORS, GRADE_LABELS, countGrades } from '../constants/checklist';
+import { CAT_TA1_CHECKLIST, GRADE_COLORS, GRADE_LABELS, countGrades, worstGrade } from '../constants/checklist';
 import './ReportView.css';
 
-const STATUS_TO_GRADE = { PASS: 'Green', FAIL: 'Red', MONITOR: 'Yellow' };
+/** Build a summary comment from all inspected items. */
+function buildGeneralComment(checklistState, checklistReasoningState) {
+  const entries = Object.entries(checklistState);
+  if (entries.length === 0) return 'Awaiting inspection. Record a video to begin analysis.';
 
-/** Derive the overall grade from the latest result for the General Info circle. */
-function deriveGeneralGrade(result) {
-  if (!result) return 'None';
-  if (result.cross_reference?.checklist_grade) return result.cross_reference.checklist_grade;
-  const first = result.cross_reference?.items_evaluated?.[0];
-  if (first?.checklist_grade) return first.checklist_grade;
-  return STATUS_TO_GRADE[result.final_status] || 'None';
+  const reds = entries.filter(([, g]) => g === 'Red').map(([k]) => k);
+  const yellows = entries.filter(([, g]) => g === 'Yellow').map(([k]) => k);
+  const greens = entries.filter(([, g]) => g === 'Green').map(([k]) => k);
+
+  const parts = [];
+  parts.push(`${entries.length} item${entries.length !== 1 ? 's' : ''} inspected.`);
+  if (reds.length) parts.push(`FAIL (${reds.length}): ${reds.join(', ')}.`);
+  if (yellows.length) parts.push(`MONITOR (${yellows.length}): ${yellows.join(', ')}.`);
+  if (greens.length) parts.push(`PASS (${greens.length}): ${greens.join(', ')}.`);
+  return parts.join(' ');
 }
 
 export function ReportView({ result, checklistState, checklistReasoningState = {}, onInjectMock, mockList = [] }) {
   const [expandedItem, setExpandedItem] = useState(null);
   const [selectedMock, setSelectedMock] = useState(0);
 
-  const generalGrade = deriveGeneralGrade(result);
+  const generalGrade = Object.keys(checklistState).length > 0 ? worstGrade(checklistState) : 'None';
   const counts = countGrades(checklistState);
+  const generalComment = buildGeneralComment(checklistState, checklistReasoningState);
 
   return (
     <div className="pdf-container">
@@ -67,9 +74,7 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
           <span className="item-status">{result ? (GRADE_LABELS[generalGrade] || result.final_status || 'PENDING') : 'PENDING'}</span>
         </div>
         <div className="item-comment">
-          {result
-            ? `Component: ${result.visual_analysis?.component || 'Unknown'}. ${result.cross_reference?.verdict_reasoning || result.audio_transcription?.full_text || 'Analysis complete.'}`
-            : 'Awaiting inspection. Record a video to begin analysis.'}
+          {generalComment}
         </div>
       </div>
 
