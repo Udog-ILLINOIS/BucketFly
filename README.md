@@ -197,28 +197,6 @@ Open **http://localhost:5173** in a mobile browser (or use Chrome DevTools devic
 
 ---
 
-## Demo Scenarios
-
-The app is designed around three key demo scenarios using a Cat Wheel Loader:
-
-### Scenario A: Hydraulic Leak Detection (AI Override)
-The operator says "looks good," but the AI detects dark fluid pooling at a cylinder seal and **overrides** the user's assessment → **FAIL**.
-
-### Scenario B: Bucket Teeth Wear (History Comparison)
-AI compares today's bucket teeth geometry against historical baseline, detects accelerated wear → **MONITOR** with part replacement recommendation.
-
-### Scenario C: Air Filter Clarification (Human-in-the-Loop)
-Dust indicator level is ambiguous in the video. AI triggers a clarification alert; operator responds via voice → **PASS** after clarification.
-
-To seed demo history data:
-
-```bash
-cd backend
-python seed_demo_scenarios.py
-```
-
----
-
 ## Architecture
 
 ```
