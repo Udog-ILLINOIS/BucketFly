@@ -1,7 +1,8 @@
 """
-Gemini AI Service — Cat Vision-Inspect
+Gemini AI Service — Call 1: Audio Transcription Only
 
-Audio transcription only. Visual analysis and reasoning handled by claude_service.py.
+Transcribes the inspector's speech and identifies which components were named.
+No condition assessment is made here — that is Call 3's job.
 """
 
 import os
@@ -9,7 +10,7 @@ import json
 import time
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 from google import genai
 from google.genai import types
@@ -22,19 +23,20 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY not set in .env")
 
         self.client = genai.Client(api_key=api_key)
-        self.model = 'gemini-2.5-flash-lite'
-        print(f'[GEMINI] Using model: {self.model} (audio only)')
+        self.model = 'gemini-2.5-flash-preview-04-17'
+        print(f'[CALL 1 — AUDIO] Model: {self.model}')
 
     def transcribe_audio(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> dict:
         """
-        Transcribe audio from an equipment inspection.
+        Call 1: Pure transcription of inspector speech.
 
-        Args:
-            audio_bytes: Raw audio bytes (WebM format)
-            mime_type: MIME type of the audio
+        Captures:
+        - Exact words spoken
+        - Timestamps per segment
+        - Which component names were mentioned and when
+        - The exact phrase the operator used per component (verbatim, not assessed)
 
-        Returns:
-            Structured transcription with timestamps and component mentions
+        Does NOT assess condition — that is Call 3's responsibility.
         """
         start = time.time()
 
@@ -49,7 +51,7 @@ class GeminiService:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=AUDIO_SCHEMA,
-                temperature=0.1,
+                temperature=0.0,
             )
         )
 
@@ -58,9 +60,10 @@ class GeminiService:
         try:
             result = json.loads(response.text)
         except json.JSONDecodeError:
-            result = {"raw_response": response.text, "parse_error": True}
+            result = {"raw_response": response.text, "parse_error": True, "full_text": "", "segments": [], "components_mentioned": []}
 
         result["processing_time_seconds"] = elapsed
+        print(f'[CALL 1 — AUDIO] {elapsed}s | components heard: {[c.get("name") for c in result.get("components_mentioned", [])]}')
         return result
 
 
@@ -68,27 +71,27 @@ class GeminiService:
 # PROMPT
 # ──────────────────────────────────────────────────────
 
-AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing a Caterpillar equipment field inspection.
+AUDIO_TRANSCRIPTION_PROMPT = """You are transcribing audio from an F1TENTH autonomous racing car pre-run inspection.
 
-The inspector is speaking while examining a component. Transcribe their speech accurately.
+YOUR ONLY TASK: Transcribe exactly what was spoken. Record component names and the operator's exact words. Do not assess, interpret, or grade anything.
 
-For each segment of speech:
-1. Provide the exact text spoken
-2. Estimate the start and end timestamp in seconds
-3. If a Caterpillar equipment component is mentioned, identify it using standard Cat terminology
+RULES:
+1. Transcribe word-for-word. Do not paraphrase or summarize.
+2. For each segment of speech, record start and end time in seconds.
+3. If the operator names an F1TENTH component, record the component name and the EXACT phrase they used (e.g. "looks good", "seems worn", "might be cracked"). Do not interpret these phrases — record them verbatim.
+4. If nothing is said, return empty arrays.
+5. Do not add any assessment of your own.
 
-Common components to listen for:
-- Hydraulic cylinders, hoses, fittings
-- Bucket (cutting edge, teeth, side cutters)
-- Undercarriage (track shoes, rollers, idlers, sprockets)
-- Engine components (oil, coolant, belts, filters)
-- Structural members (boom, stick, frame)
-- Ground engaging tools (GET)
-
-IMPORTANT — Location vs. Component:
-If the inspector mentions a fluid (oil, coolant, hydraulic fluid) near or under another part (e.g., "oil under the tires", "fluid near the tracks"), the component is the FLUID SOURCE (e.g., "engine oil", "hydraulic fluid"), NOT the structural location (e.g., "tires", "tracks"). The location describes where the leak is visible, not the component being identified.
-
-Be precise with timestamps and exact with the spoken words."""
+F1TENTH components to listen for (use these standardized names when a component is identified):
+- Tire (Front Left / Front Right / Rear Left / Rear Right)
+- Shock (Front Left / Front Right / Rear Left / Rear Right)
+- Bumper (Front / Rear)
+- Undercarriage
+- Battery
+- Powerboard
+- NVIDIA Jetson
+- Antenna
+- LiDAR"""
 
 
 # ──────────────────────────────────────────────────────
@@ -118,9 +121,13 @@ AUDIO_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "timestamp": {"type": "number"}
+                    "timestamp": {"type": "number"},
+                    "operator_statement": {
+                        "type": "string",
+                        "description": "Exact verbatim phrase the operator used about this component. Do not interpret."
+                    }
                 },
-                "required": ["name", "timestamp"]
+                "required": ["name", "timestamp", "operator_statement"]
             }
         }
     },

@@ -15,15 +15,14 @@ import './CaptureZone.css';
 export function CaptureZone({ onInspectionComplete }) {
     const {
         status,
-        frames,
-        audioBlob,
+        videoBlob,
         error,
         recordingTime,
         startRecording,
         stopRecording,
         reset,
         attachStream,
-    } = useMediaCapture({ frameInterval: 500 });
+    } = useMediaCapture();
 
     const [uploadStatus, setUploadStatus] = useState(null);
     const [uploadMessage, setUploadMessage] = useState('');
@@ -49,11 +48,12 @@ export function CaptureZone({ onInspectionComplete }) {
             const result = await stopRecording();
             if (result && onInspectionComplete) {
                 setUploadStatus('uploading');
-                setUploadMessage(`Uploading ${result.frames.length} frames...`);
+                setUploadMessage('Uploading video...');
                 try {
-                    await onInspectionComplete(result.frames, result.audioBlob);
+                    // result contains { videoBlob, audioBlob }
+                    await onInspectionComplete(result);
                     setUploadStatus('success');
-                    setUploadMessage(`Upload complete! ${result.frames.length} frames captured ✓`);
+                    setUploadMessage('Upload complete ✓');
                     setTimeout(() => {
                         reset();
                         setUploadStatus(null);
@@ -65,7 +65,7 @@ export function CaptureZone({ onInspectionComplete }) {
                 }
             } else if (result) {
                 setUploadStatus('success');
-                setUploadMessage(`Captured ${result.frames.length} frames ✓`);
+                setUploadMessage('Recording captured ✓');
                 setTimeout(() => {
                     reset();
                     setUploadStatus(null);

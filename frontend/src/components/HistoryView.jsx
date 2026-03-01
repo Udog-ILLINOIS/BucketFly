@@ -4,51 +4,27 @@ import '../components/ReportView.css';
 import './HistoryView.css';
 
 const CAT_TA1_CHECKLIST = {
-    "FROM THE GROUND": [
-        "1.1 Tires and Rims",
-        "1.2 Bucket Cutting Edge, Tips, or Moldboard",
-        "1.3 Bucket Tilt Cylinders and Hoses",
-        "1.4 Bucket, Lift Cylinders and Hoses",
-        "1.5 Lift arm attachment to frame",
-        "1.6 Underneath of Machine",
-        "1.7 Transmission and Transfer Gears",
-        "1.8 Differential and Final Drive Oil",
-        "1.9 Steps and Handrails",
-        "1.10 Brake Air Tank; inspect",
-        "1.11 Fuel Tank",
-        "1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals",
-        "1.13 Hydraulic fluid tank, inspect",
-        "1.14 Transmission Oil",
-        "1.15 Work Lights",
-        "1.16 Battery & Cables"
+    "MECHANICAL": [
+        "1.1 Tire 1 — Front Left",
+        "1.2 Tire 2 — Front Right",
+        "1.3 Tire 3 — Rear Left",
+        "1.4 Tire 4 — Rear Right",
+        "1.5 Shock 1 — Front Left",
+        "1.6 Shock 2 — Front Right",
+        "1.7 Shock 3 — Rear Left",
+        "1.8 Shock 4 — Rear Right",
+        "1.9 Bumper 1 — Front",
+        "1.10 Bumper 2 — Rear",
+        "1.11 Undercarriage"
     ],
-    "ENGINE COMPARTMENT": [
-        "2.1 Engine Oil Level",
-        "2.2 Engine Coolant Level",
-        "2.3 Check Radiator Cores for Debris",
-        "2.4 Inspect Hoses for Cracks or Leaks",
-        "2.5 Primary/secondary fuel filters",
-        "2.6 All Belts",
-        "2.7 Air Cleaner and Air Filter Service Indicator",
-        "2.8 Overall Engine Compartment"
+    "ELECTRONICS & POWER": [
+        "2.1 Battery",
+        "2.2 Powerboard",
+        "2.3 NVIDIA Jetson",
+        "2.4 Antenna"
     ],
-    "ON THE MACHINE, OUTSIDE THE CAB": [
-        "3.1 Steps & Handrails",
-        "3.2 ROPS/FOPS",
-        "3.3 Fire Extinguisher",
-        "3.4 Windshield wipers and washers",
-        "3.5 Side Doors"
-    ],
-    "INSIDE THE CAB": [
-        "4.1 Seat",
-        "4.2 Seat belt and mounting",
-        "4.3 Horn",
-        "4.4 Backup Alarm",
-        "4.5 Windows and Mirrors",
-        "4.6 Cab Air Filter",
-        "4.7 Indicators & Gauges",
-        "4.8 Switch functionality",
-        "4.9 Overall Cab Interior"
+    "SENSORS": [
+        "3.1 LiDAR"
     ]
 };
 
@@ -122,7 +98,8 @@ export function HistoryView() {
     // Also build a map of item -> record for showing detail
     const itemRecords = {};
     [...records].reverse().forEach(record => {
-        const item = record.ai_analysis?.checklist_mapped_item || record.component;
+        // Support both old schema (checklist_mapped_item) and new schema (checklist_item)
+        const item = record.ai_analysis?.checklist_item || record.ai_analysis?.checklist_mapped_item || record.component;
         const grade = record.ai_analysis?.checklist_grade || record.grade;
         if (item && grade && grade !== 'None') {
             checklistState[item] = grade;
@@ -166,12 +143,12 @@ export function HistoryView() {
             {/* PDF Header */}
             <div className="pdf-header">
                 <div className="pdf-title-block">
-                    <h1>Wheel Loader: Safety & Maintenance</h1>
+                    <h1>F1Tenth: Pre-Run Inspection</h1>
                     <p className="pdf-subtitle">Daily — {selectedDate}</p>
                 </div>
                 <div className="pdf-logos">
-                    <div className="logo-altorfer">ALTORFER</div>
-                    <div className="logo-cat">CAT</div>
+                    <div className="logo-altorfer">F1TENTH</div>
+                    <div className="logo-cat">UIUC</div>
                 </div>
                 <div className="pdf-summary-dots">
                     <div className="summary-dot"><span className="dot red"></span>{counts.Red}</div>
@@ -184,16 +161,16 @@ export function HistoryView() {
             {/* Meta Grid */}
             <div className="pdf-meta-grid">
                 <div className="meta-item"><span className="meta-label">Inspection Date</span><span className="meta-value">{selectedDate}</span></div>
-                <div className="meta-item"><span className="meta-label">Customer No</span><span className="meta-value">2969507567</span></div>
-                <div className="meta-item"><span className="meta-label">Serial Number</span><span className="meta-value">W8210127</span></div>
-                <div className="meta-item"><span className="meta-label">Customer Name</span><span className="meta-value">BORAL RESOURCES P/L</span></div>
-                <div className="meta-item"><span className="meta-label">Make</span><span className="meta-value">CATERPILLAR</span></div>
-                <div className="meta-item"><span className="meta-label">Work Order</span><span className="meta-value">FW12076</span></div>
-                <div className="meta-item"><span className="meta-label">Model</span><span className="meta-value">982</span></div>
+                <div className="meta-item"><span className="meta-label">Team</span><span className="meta-value">HackAstra</span></div>
+                <div className="meta-item"><span className="meta-label">Platform</span><span className="meta-value">F1Tenth Autonomous Racecar</span></div>
+                <div className="meta-item"><span className="meta-label">Compute</span><span className="meta-value">NVIDIA Jetson</span></div>
+                <div className="meta-item"><span className="meta-label">Make</span><span className="meta-value">F1TENTH</span></div>
+                <div className="meta-item"><span className="meta-label">University</span><span className="meta-value">University of Illinois</span></div>
+                <div className="meta-item"><span className="meta-label">Scale</span><span className="meta-value">1:10</span></div>
                 <div className="meta-item"><span className="meta-label">Total Inspections</span><span className="meta-value">{records.length}</span></div>
-                <div className="meta-item"><span className="meta-label">Equipment Family</span><span className="meta-value">Medium Wheel Loader</span></div>
+                <div className="meta-item"><span className="meta-label">Equipment Family</span><span className="meta-value">Autonomous Racing</span></div>
                 <div className="meta-item"><span className="meta-label">Inspector</span><span className="meta-value">AI VISION AGENT</span></div>
-                <div className="meta-item"><span className="meta-label">Asset ID</span><span className="meta-value">FL-3062</span></div>
+                <div className="meta-item"><span className="meta-label">Event</span><span className="meta-value">HackIllinois 2026</span></div>
                 <div className="meta-item"><span className="meta-label">Report Generated</span><span className="meta-value">{new Date().toLocaleDateString()}</span></div>
             </div>
 

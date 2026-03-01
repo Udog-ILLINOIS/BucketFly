@@ -1,0 +1,53 @@
+{
+  "inspection_id": "20260228_124523_545365",
+  "frame_count": 9,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The frames show a human subject, a young male, from the chest up. He is wearing a dark shirt and has an earbud in his left ear. His expression changes from contemplative to a slight smile. The background shows an indoor setting with a white ceiling, recessed lighting, and a rectangular vent. There are windows in the background, suggesting an office or public space. No heavy equipment or components are visible.",
+      "component_identification": "No heavy equipment components are identifiable in these frames. The subject is a human.",
+      "condition_assessment": "Since no equipment components are visible, an assessment of equipment condition based on Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "It is UNCLEAR what component is being inspected as no heavy equipment is present in the frames."
+    },
+    "component": "N/A - No equipment visible",
+    "condition_observations": [
+      "No heavy equipment components are visible in any of the provided frames.",
+      "The frames primarily show a human subject indoors."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1,
+    "concerns": [
+      "Inability to identify any heavy equipment components for inspection."
+    ],
+    "processing_time_seconds": 5.0
+  },
+  "audio_transcription": {
+    "full_text": "Interesting.",
+    "segments": [
+      {
+        "text": "Interesting.",
+        "start_time": 2.5,
+        "end_time": 3.0
+      }
+    ],
+    "components_mentioned": [],
+    "processing_time_seconds": 2.55
+  },
+  "cross_reference": {
+    "final_status": "CLARIFY",
+    "confidence": 1,
+    "checklist_mapped_item": "None",
+    "checklist_grade": "None",
+    "verdict_reasoning": "No heavy equipment components were visible in the provided frames, making it impossible to identify any specific item from the TA1 checklist for inspection. The operator's comment 'Interesting' does not refer to any specific component.",
+    "clarification_question": "Could you please provide frames that show a specific heavy equipment component for inspection?",
+    "recommendation": "Ensure future submissions clearly show the equipment component intended for inspection.",
+    "chain_of_thought": {
+      "audio_says": "Interesting.",
+      "visual_shows": "No heavy equipment components are visible. The frames primarily show a human subject indoors.",
+      "comparison": "Neither the visual AI nor the operator identified any heavy equipment component. They implicitly agree on the absence of an inspectable component.",
+      "checkist_mapping_reasoning": "No heavy equipment components are visible in the frames, therefore no item from the TA1 checklist can be mapped."
+    },
+    "processing_time_seconds": 4.12
+  },
+  "final_status": "CLARIFY"
+}

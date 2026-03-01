@@ -1,0 +1,13 @@
+{
+  "inspection_id": "20260228_131729_417444",
+  "frame_count": 1,
+  "has_audio": false,
+  "visual_analysis": {
+    "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+    "preliminary_status": "UNCLEAR"
+  },
+  "cross_reference": {
+    "error": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}"
+  },
+  "final_status": "UNCLEAR"
+}

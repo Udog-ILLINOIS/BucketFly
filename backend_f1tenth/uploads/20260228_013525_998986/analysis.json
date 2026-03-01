@@ -1,0 +1,172 @@
+{
+  "inspection_id": "20260228_013525_998986",
+  "frame_count": 33,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames show a person from the chest up, looking directly at the camera, then looking up and to the side while touching their forehead. The person is wearing a dark jacket with white stripes on the sleeves and an earbud in their left ear. The background appears to be an indoor setting with large windows and a red structural beam. No heavy equipment or machine components are visible in any of the provided frames.",
+      "component_identification": "No heavy equipment component is identifiable in the provided frames. The subject of the video is a human.",
+      "condition_assessment": "Without any identifiable heavy equipment components, an assessment against Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "The frames do not contain any heavy equipment for inspection. Therefore, the condition of any component is unclear."
+    },
+    "component": "N/A - No equipment visible",
+    "condition_observations": [
+      "No heavy equipment or machine components are visible in the provided frames."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No heavy equipment is present in the video frames to perform an inspection."
+    ],
+    "processing_time_seconds": 5.33
+  },
+  "has_audio": true,
+  "audio_transcription": {
+    "full_text": "Okay, looking at the hydraulic cylinder here. Looks good. No leaks. Moving over to the bucket, the cutting edge seems a bit worn. We'll need to check the teeth as well. The undercarriage track shoes show some wear, but still acceptable. The engine oil level is good, and the coolant looks fine. Belts are tight. Filters appear clean. The boom and stick look solid. No issues with the frame. The ground engaging tools on the bucket need replacement.",
+    "segments": [
+      {
+        "text": "Okay, looking at the hydraulic cylinder here.",
+        "start_time": 0.0,
+        "end_time": 2.5,
+        "component_mentioned": "Hydraulic cylinder"
+      },
+      {
+        "text": "Looks good. No leaks.",
+        "start_time": 2.5,
+        "end_time": 4.0
+      },
+      {
+        "text": "Moving over to the bucket, the cutting edge seems a bit worn.",
+        "start_time": 4.0,
+        "end_time": 7.5,
+        "component_mentioned": "Cutting edge"
+      },
+      {
+        "text": "We'll need to check the teeth as well.",
+        "start_time": 7.5,
+        "end_time": 9.5,
+        "component_mentioned": "Teeth"
+      },
+      {
+        "text": "The undercarriage track shoes show some wear, but still acceptable.",
+        "start_time": 9.5,
+        "end_time": 13.5,
+        "component_mentioned": "Track shoes"
+      },
+      {
+        "text": "The engine oil level is good, and the coolant looks fine.",
+        "start_time": 13.5,
+        "end_time": 17.0,
+        "component_mentioned": "Engine oil"
+      },
+      {
+        "text": "Belts are tight.",
+        "start_time": 17.0,
+        "end_time": 18.0,
+        "component_mentioned": "Belts"
+      },
+      {
+        "text": "Filters appear clean.",
+        "start_time": 18.0,
+        "end_time": 19.5,
+        "component_mentioned": "Filters"
+      },
+      {
+        "text": "The boom and stick look solid.",
+        "start_time": 19.5,
+        "end_time": 21.5,
+        "component_mentioned": "Boom"
+      },
+      {
+        "text": "No issues with the frame.",
+        "start_time": 21.5,
+        "end_time": 23.0,
+        "component_mentioned": "Frame"
+      },
+      {
+        "text": "The ground engaging tools on the bucket need replacement.",
+        "start_time": 23.0,
+        "end_time": 26.5,
+        "component_mentioned": "Ground engaging tools"
+      }
+    ],
+    "components_mentioned": [
+      {
+        "name": "Hydraulic cylinder",
+        "timestamp": 0.0
+      },
+      {
+        "name": "Bucket",
+        "timestamp": 4.0
+      },
+      {
+        "name": "Cutting edge",
+        "timestamp": 4.0
+      },
+      {
+        "name": "Teeth",
+        "timestamp": 7.5
+      },
+      {
+        "name": "Undercarriage",
+        "timestamp": 9.5
+      },
+      {
+        "name": "Track shoes",
+        "timestamp": 9.5
+      },
+      {
+        "name": "Engine oil",
+        "timestamp": 13.5
+      },
+      {
+        "name": "Coolant",
+        "timestamp": 13.5
+      },
+      {
+        "name": "Belts",
+        "timestamp": 17.0
+      },
+      {
+        "name": "Filters",
+        "timestamp": 18.0
+      },
+      {
+        "name": "Boom",
+        "timestamp": 19.5
+      },
+      {
+        "name": "Stick",
+        "timestamp": 19.5
+      },
+      {
+        "name": "Frame",
+        "timestamp": 21.5
+      },
+      {
+        "name": "Ground engaging tools",
+        "timestamp": 23.0
+      }
+    ],
+    "processing_time_seconds": 12.05
+  },
+  "cross_reference": {
+    "final_status": "CLARIFY",
+    "confidence": 0.9,
+    "component": "Overall Inspection Context",
+    "verdict_reasoning": "The AI's visual analysis indicates no heavy equipment is visible in the frames, making it impossible to verify the operator's detailed assessment of various components. The operator's description directly contradicts the visual evidence.",
+    "disagreement_detected": true,
+    "disagreement_reason": "The AI's visual analysis states no equipment is visible in the frames, while the operator provides a detailed assessment of multiple equipment components, implying an inspection is taking place.",
+    "clarification_question": "Is the equipment present in the video frames, or was the operator describing an inspection performed off-camera?",
+    "what_ai_sees": "No heavy equipment or machine components are visible in the provided frames. No heavy equipment is present in the video frames to perform an inspection. The frames do not contain any heavy equipment for inspection. Therefore, the condition of any component is unclear.",
+    "what_operator_said": "Okay, looking at the hydraulic cylinder here. Looks good. No leaks. Moving over to the bucket, the cutting edge seems a bit worn. We'll need to check the teeth as well. The undercarriage track shoes show some wear, but still acceptable. The engine oil level is good, and the coolant looks fine. Belts are tight. Filters appear clean. The boom and stick look solid. No issues with the frame. The ground engaging tools on the bucket need replacement.",
+    "recommendation": "Re-evaluate the video to ensure equipment is visible, or confirm if the operator's assessment pertains to a different context.",
+    "chain_of_thought": {
+      "audio_says": "The operator describes inspecting various components like hydraulic cylinder, bucket, cutting edge, undercarriage, engine oil, coolant, belts, filters, boom, stick, and frame, noting conditions such as worn cutting edge and track shoes, good oil/coolant, tight belts, clean filters, and solid boom/stick/frame. They also state ground engaging tools need replacement.",
+      "visual_shows": "The visual analysis indicates that no heavy equipment or machine components are visible in any of the provided frames. The AI explicitly states that it cannot perform an inspection because no equipment is present.",
+      "comparison": "There is a direct and fundamental contradiction between the audio and visual information. The operator is clearly describing an inspection of heavy equipment components, while the AI's visual analysis unequivocally states that no equipment is visible in the video frames. This makes it impossible to cross-reference or verify any of the operator's claims visually.",
+      "final_verdict": "Due to the complete absence of visible equipment in the video frames, as reported by the AI, the detailed inspection described by the operator cannot be verified. This constitutes a critical discrepancy requiring clarification."
+    },
+    "processing_time_seconds": 7.99
+  },
+  "final_status": "CLARIFY"
+}

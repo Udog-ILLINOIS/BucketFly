@@ -1,0 +1,42 @@
+{
+  "inspection_id": "20260228_014153_753937",
+  "frame_count": 32,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames display a young male, wearing a dark blue jacket with white stripes and earbuds. He is seen looking directly at the camera, closing and opening his eyes, rubbing his eyes with his hands, looking around, and touching his neck/chin. The background features large windows and a prominent orange structural beam. No heavy equipment components are visible in any of the frames.",
+      "component_identification": "No heavy equipment component is identifiable in the provided video frames. The subject is a person.",
+      "condition_assessment": "Without any visible heavy equipment components, an assessment of their condition against Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "The preliminary status is UNCLEAR because no equipment component is present or visible for inspection in these frames."
+    },
+    "component": "N/A - No equipment component visible",
+    "condition_observations": [
+      "No heavy equipment components are visible in the frames for inspection."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No heavy equipment component was presented for inspection."
+    ],
+    "processing_time_seconds": 6.39
+  },
+  "has_audio": false,
+  "cross_reference": {
+    "final_status": "CLARIFY",
+    "confidence": 1.0,
+    "component": "N/A - No equipment component visible",
+    "verdict_reasoning": "The AI analysis indicates that no heavy equipment component was visible in the frames for inspection. The operator provided no audio assessment. Therefore, the inspection cannot proceed without the component being presented.",
+    "disagreement_detected": false,
+    "clarification_question": "Please present the heavy equipment component for inspection.",
+    "what_ai_sees": "No heavy equipment components are visible in the frames for inspection. No heavy equipment component was presented for inspection. The preliminary status is UNCLEAR because no equipment component is present or visible for inspection in these frames.",
+    "what_operator_said": "No audio provided",
+    "recommendation": "Operator needs to present the heavy equipment component for the inspection to proceed.",
+    "chain_of_thought": {
+      "audio_says": "No audio provided by the operator.",
+      "visual_shows": "The visual analysis shows no heavy equipment component present in the frames for inspection. The background appears to be an indoor setting with windows and structural elements.",
+      "comparison": "There is no operator audio to compare with the visual analysis. The visual analysis clearly indicates the absence of any equipment component for inspection.",
+      "final_verdict": "Given the absence of an equipment component for inspection and no operator input, the inspection cannot be completed. A clarification is required to prompt the operator to present the component."
+    },
+    "processing_time_seconds": 6.09
+  },
+  "final_status": "CLARIFY"
+}

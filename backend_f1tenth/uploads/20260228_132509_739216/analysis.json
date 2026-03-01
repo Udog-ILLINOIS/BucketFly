@@ -1,0 +1,32 @@
+{
+  "inspection_id": "20260228_132509_739216",
+  "frame_count": 5,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The frames show a young man in a dark hoodie, positioned in front of a large window. The lighting is bright from behind him, creating a slight silhouette. No heavy equipment components, machinery, or parts relevant to a TA1 Daily Walkaround inspection are visible in any of the provided images.",
+      "component_identification": "No heavy equipment components are identifiable in these frames. The subject is a human, not a machine part.",
+      "condition_assessment": "Without any visible heavy equipment components, it is impossible to assess their condition against Caterpillar maintenance standards. There is no evidence of wear, damage, fluid levels, or structural integrity to evaluate.",
+      "conclusion": "The inspection cannot be performed as no relevant components are present in the images."
+    },
+    "component": "Not Applicable - No equipment visible",
+    "condition_observations": [
+      "No heavy equipment or machinery components are visible in the provided images.",
+      "The images depict a human subject indoors, in front of a window."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 0,
+    "concerns": [
+      "No equipment was visible to perform the inspection."
+    ],
+    "processing_time_seconds": 3.9
+  },
+  "audio_transcription": {
+    "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\\nPlease retry in 46.210428752s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '46s'}]}}",
+    "full_text": ""
+  },
+  "cross_reference": {
+    "error": "429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\\nPlease retry in 46.079957499s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '46s'}]}}"
+  },
+  "final_status": "UNCLEAR"
+}

@@ -1,0 +1,47 @@
+{
+  "status": "analyzed",
+  "inspection_id": "20260228_003513",
+  "frame_count": 8,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames primarily show a person's face, looking directly at the camera, then briefly looking upwards and to the right, and then back to the camera. The person is wearing earbuds. The background consists of large windows and a red structural beam. No heavy equipment components are visible in any of the provided frames.",
+      "component_identification": "No heavy equipment components are identifiable in these frames. The subject is a human face.",
+      "condition_assessment": "As no heavy equipment components are visible, an assessment of their condition based on Caterpillar maintenance standards cannot be performed. The human subject's condition is not relevant to a heavy equipment inspection.",
+      "conclusion": "Due to the absence of any visible heavy equipment components, it is impossible to determine the condition of any part of the equipment from these frames."
+    },
+    "component": "N/A (No equipment visible)",
+    "condition_observations": [
+      "No heavy equipment components are visible in the frames.",
+      "The frames show a human subject's face.",
+      "Background includes windows and a red structural beam."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "Lack of visual information regarding any heavy equipment components."
+    ],
+    "processing_time_seconds": 4.26
+  },
+  "audio_transcription": {
+    "full_text": "the issue something something",
+    "segments": [
+      {
+        "text": "the issue",
+        "start_time": 0.0,
+        "end_time": 0.5
+      },
+      {
+        "text": "something something",
+        "start_time": 0.5,
+        "end_time": 1.5
+      }
+    ],
+    "components_mentioned": [],
+    "processing_time_seconds": 3.96
+  },
+  "timestamp_correlation": {
+    "correlations": [],
+    "note": "No components or frames to correlate"
+  }
+}

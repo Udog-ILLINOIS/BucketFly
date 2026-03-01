@@ -1,0 +1,54 @@
+{
+  "inspection_id": "20260228_014244_019993",
+  "frame_count": 5,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The provided frames display a young male individual from the chest up. He is wearing a dark blue jacket with white stripes on the sleeves and an earbud in his left ear. His facial expressions vary from neutral to slightly concerned, and he makes a gesture with his left hand towards his temple. The background shows an indoor setting with large windows and artificial lighting. No heavy equipment or machinery components are visible in any of the frames.",
+      "component_identification": "No heavy equipment components are identifiable in the provided frames. The subject is a human, not a machine part.",
+      "condition_assessment": "As no heavy equipment components are visible, an assessment of component condition based on Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "The frames do not contain any heavy equipment for inspection. Therefore, a condition assessment cannot be made."
+    },
+    "component": "N/A - No equipment visible",
+    "condition_observations": [
+      "No heavy equipment components were observed in the provided frames."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No heavy equipment or components were present in the provided visual data to perform an inspection."
+    ],
+    "processing_time_seconds": 4.6
+  },
+  "has_audio": true,
+  "audio_transcription": {
+    "full_text": "I think it's",
+    "segments": [
+      {
+        "text": "I think it's",
+        "start_time": 0.007,
+        "end_time": 0.707
+      }
+    ],
+    "components_mentioned": [],
+    "processing_time_seconds": 2.61
+  },
+  "cross_reference": {
+    "final_status": "CLARIFY",
+    "confidence": 1.0,
+    "component": "N/A",
+    "verdict_reasoning": "The visual analysis indicates no heavy equipment is present for inspection, and the operator's statement is incomplete, preventing any assessment.",
+    "disagreement_detected": false,
+    "clarification_question": "Is there heavy equipment present that should be inspected in these frames?",
+    "what_ai_sees": "No heavy equipment components were observed in the provided frames.",
+    "what_operator_said": "I think it's",
+    "recommendation": "Ensure heavy equipment is clearly visible in the frames for inspection to proceed.",
+    "chain_of_thought": {
+      "audio_says": "The operator started a sentence, 'I think it's', but did not complete it, providing no specific assessment or mention of components.",
+      "visual_shows": "The visual analysis confirms that no heavy equipment components are visible in any of the provided frames.",
+      "comparison": "The operator's incomplete statement does not provide any information about equipment condition, and the AI clearly indicates the absence of any equipment to inspect. Therefore, no comparison regarding equipment condition can be made, and no disagreement is detected.",
+      "final_verdict": "An inspection cannot be performed as no heavy equipment is present in the visual data, and the operator's input is incomplete."
+    },
+    "processing_time_seconds": 10.21
+  },
+  "final_status": "CLARIFY"
+}

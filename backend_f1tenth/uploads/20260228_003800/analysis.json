@@ -1,0 +1,72 @@
+{
+  "status": "analyzed",
+  "inspection_id": "20260228_003800",
+  "frame_count": 17,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames consistently show a person's face, wearing earbuds and a striped athletic jacket. The background features large windows and a prominent red structural beam. There are no visible heavy equipment components or parts in any of the provided frames.",
+      "component_identification": "No heavy equipment components are identifiable in these frames, as the subject is a person and the background is an indoor setting with architectural elements.",
+      "condition_assessment": "Since no heavy equipment components are visible, it is not possible to assess their condition against Caterpillar maintenance standards.",
+      "conclusion": "The condition of any heavy equipment component cannot be determined from these frames as no such components are present in the imagery."
+    },
+    "component": "N/A - No equipment component visible",
+    "condition_observations": [
+      "No heavy equipment components are visible in the frames."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No equipment components are present in the images for inspection."
+    ],
+    "processing_time_seconds": 6.22
+  },
+  "audio_transcription": {
+    "full_text": "The bucket cutting edge looks worn here. And the wheel loader tire has a crack.",
+    "segments": [
+      {
+        "text": "The bucket cutting edge looks worn here.",
+        "start_time": 0.0,
+        "end_time": 2.8,
+        "component_mentioned": "Bucket cutting edge"
+      },
+      {
+        "text": "And the wheel loader tire has a crack.",
+        "start_time": 5.5,
+        "end_time": 8.9,
+        "component_mentioned": "Wheel loader tire"
+      }
+    ],
+    "components_mentioned": [
+      {
+        "name": "Bucket cutting edge",
+        "timestamp": 0.0
+      },
+      {
+        "name": "Wheel loader tire",
+        "timestamp": 5.5
+      }
+    ],
+    "processing_time_seconds": 6.21
+  },
+  "timestamp_correlation": {
+    "correlations": [
+      {
+        "component": "Bucket cutting edge",
+        "audio_timestamp": 0.0,
+        "nearest_frame_index": 0,
+        "nearest_frame_timestamp": 0.0,
+        "time_offset": 0.0,
+        "confidence": "high"
+      },
+      {
+        "component": "Wheel loader tire",
+        "audio_timestamp": 5.5,
+        "nearest_frame_index": 11,
+        "nearest_frame_timestamp": 5.5,
+        "time_offset": 0.0,
+        "confidence": "high"
+      }
+    ]
+  }
+}

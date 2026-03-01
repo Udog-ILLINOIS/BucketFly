@@ -1,0 +1,25 @@
+{
+  "status": "analyzed",
+  "inspection_id": "20260228_004840",
+  "frame_count": 37,
+  "has_audio": false,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames show a young man speaking to the camera. He is wearing a dark blue jacket with white stripes and has an earbud in his left ear. The background features large windows and a red structural element. No heavy equipment or machine components are visible in any of the frames.",
+      "component_identification": "No heavy equipment component is identifiable in these frames. The subject is a person.",
+      "condition_assessment": "As no equipment component is present, an assessment of its condition against Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "The status regarding any equipment component is UNCLEAR as no such component is depicted."
+    },
+    "component": "N/A - No equipment component visible",
+    "condition_observations": [
+      "The video shows a person, not a machine component.",
+      "No heavy equipment parts are present in the frames."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No equipment component was provided for inspection."
+    ],
+    "processing_time_seconds": 6.67
+  }
+}

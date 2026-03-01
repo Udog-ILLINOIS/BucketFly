@@ -1,0 +1,64 @@
+{
+  "inspection_id": "20260228_125311_217037",
+  "frame_count": 8,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The frames show a person's face and upper torso in an indoor setting. The person is wearing a dark hooded sweatshirt, an earbud in their right ear, and a smartwatch on their left wrist. The background features overhead lights and large windows. No heavy equipment components are visible in any of the frames.",
+      "component_identification": "No heavy equipment components are identifiable in these frames. The subject of the images is a human.",
+      "condition_assessment": "Without visible heavy equipment components, an assessment of their condition based on Caterpillar maintenance standards cannot be performed.",
+      "conclusion": "The condition of any heavy equipment component cannot be determined from these frames as no such components are present."
+    },
+    "component": "N/A - No heavy equipment component visible",
+    "condition_observations": [
+      "No heavy equipment components are visible in the provided frames."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "processing_time_seconds": 4.27
+  },
+  "audio_transcription": {
+    "full_text": "Boom. Now it works. Tap anywhere to close.",
+    "segments": [
+      {
+        "text": "Boom.",
+        "start_time": 0.0,
+        "end_time": 0.7,
+        "component_mentioned": "Boom"
+      },
+      {
+        "text": "Now it works.",
+        "start_time": 1.0,
+        "end_time": 1.9
+      },
+      {
+        "text": "Tap anywhere to close.",
+        "start_time": 2.2,
+        "end_time": 3.0
+      }
+    ],
+    "components_mentioned": [
+      {
+        "name": "Boom",
+        "timestamp": 0.0
+      }
+    ],
+    "processing_time_seconds": 3.67
+  },
+  "cross_reference": {
+    "final_status": "CLARIFY",
+    "confidence": 1.0,
+    "checklist_mapped_item": "None",
+    "checklist_grade": "None",
+    "verdict_reasoning": "The visual analysis indicates no heavy equipment components are visible in the provided frames. The operator's statement \"Boom. Now it works\" refers to a function rather than an inspection of a specific component's condition from the checklist. Without visible components or a clear assessment of a checklist item, a verdict cannot be rendered.",
+    "clarification_question": "Could you please provide video footage that clearly shows the 'Boom' component you are referring to, so its condition can be visually inspected?",
+    "chain_of_thought": {
+      "audio_says": "Boom. Now it works. Tap anywhere to close.",
+      "visual_shows": "No heavy equipment components are visible in the provided frames.",
+      "comparison": "The visual analysis states no components are visible, making it impossible to compare with the operator's functional statement about something 'working.' There is no direct assessment of a component's condition from either source to compare.",
+      "checkist_mapping_reasoning": "No heavy equipment components are visible in the frames. The operator's audio mentions 'Boom' but does not describe its condition, and 'Boom' is not a direct item on the TA1 checklist. Even if 'Boom' refers to a lift arm (1.5), there is no visual information to assess it."
+    },
+    "processing_time_seconds": 6.57
+  },
+  "final_status": "CLARIFY"
+}

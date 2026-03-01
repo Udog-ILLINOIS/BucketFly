@@ -1,0 +1,56 @@
+{
+  "inspection_id": "20260228_140939_703761",
+  "frame_count": 3,
+  "has_audio": true,
+  "visual_analysis": {
+    "error": "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+    "preliminary_status": "UNCLEAR"
+  },
+  "audio_transcription": {
+    "full_text": "This is the bucket. The cutting edge is worn, and we need to replace the teeth.",
+    "segments": [
+      {
+        "text": "This is the bucket.",
+        "start_time": 0.5,
+        "end_time": 2.0,
+        "component_mentioned": "Bucket"
+      },
+      {
+        "text": "The cutting edge is worn, and we need to replace the teeth.",
+        "start_time": 2.5,
+        "end_time": 6.0,
+        "component_mentioned": "Cutting edge, Teeth"
+      }
+    ],
+    "components_mentioned": [
+      {
+        "name": "Bucket",
+        "timestamp": 0.5
+      },
+      {
+        "name": "Cutting edge",
+        "timestamp": 2.5
+      },
+      {
+        "name": "Teeth",
+        "timestamp": 5.0
+      }
+    ],
+    "processing_time_seconds": 1.66
+  },
+  "cross_reference": {
+    "final_status": "FAIL",
+    "confidence": 0.9,
+    "checklist_mapped_item": "1.2 Bucket Cutting Edge, Tips, or Moldboard",
+    "checklist_grade": "Red",
+    "verdict_reasoning": "The operator stated the cutting edge is worn and needs replacement, and the visual analysis confirms significant wear on the bucket's cutting edge and teeth, indicating it requires immediate attention.",
+    "chain_of_thought": {
+      "audio_says": "The cutting edge is worn, and we need to replace the teeth.",
+      "visual_shows": "The visual analysis shows the bucket cutting edge and teeth are significantly worn.",
+      "comparison": "The operator's statement about the worn cutting edge and teeth aligns with the visual evidence of wear on the bucket's cutting edge and teeth. The AI analysis did not provide a specific grade but indicated 'UNCLEAR' for the component, however, the operator's verbal assessment is clear and directly addresses the condition of the cutting edge and teeth.",
+      "checklist_mapping_reasoning": "The operator explicitly mentions 'Bucket', 'Cutting edge', and 'Teeth', which directly maps to checklist item '1.2 Bucket Cutting Edge, Tips, or Moldboard'."
+    },
+    "processing_time_seconds": 1.39
+  },
+  "final_status": "FAIL"
+}

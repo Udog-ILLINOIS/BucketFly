@@ -1,0 +1,35 @@
+{
+  "status": "analyzed",
+  "inspection_id": "20260228_004427",
+  "frame_count": 16,
+  "has_audio": true,
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The video frames consistently show a young man speaking directly to the camera. He is wearing a dark jacket with white stripes on the sleeves and has an earbud in his left ear. The background features large windows with reflections and a prominent red structural beam on the right side. No heavy equipment or machine components are visible in any of the frames.",
+      "component_identification": "The subject of the video is a person, not a component of heavy equipment. Therefore, no specific heavy equipment component can be identified for inspection or assessment.",
+      "condition_assessment": "Since no heavy equipment component is present in the frames, an assessment based on Caterpillar maintenance standards for machine condition (e.g., wear, cracks, fluid levels, structural integrity) cannot be performed. The individual appears to be in normal human condition, but this is outside the scope of a heavy equipment inspection.",
+      "conclusion": "Due to the complete absence of any heavy equipment components in the provided video frames, a TA1 Daily Walkaround inspection cannot be conducted. The condition of any machine component is UNCLEAR as it cannot be observed."
+    },
+    "component": "No heavy equipment component visible",
+    "condition_observations": [
+      "The video displays a person, not heavy equipment.",
+      "No machine components are present for inspection."
+    ],
+    "preliminary_status": "UNCLEAR",
+    "confidence": 1.0,
+    "concerns": [
+      "No heavy equipment components are visible in the provided frames, preventing a proper TA1 Daily Walkaround inspection."
+    ],
+    "processing_time_seconds": 7.46
+  },
+  "audio_transcription": {
+    "full_text": "",
+    "segments": [],
+    "components_mentioned": [],
+    "processing_time_seconds": 2.24
+  },
+  "timestamp_correlation": {
+    "correlations": [],
+    "note": "No components or frames to correlate"
+  }
+}

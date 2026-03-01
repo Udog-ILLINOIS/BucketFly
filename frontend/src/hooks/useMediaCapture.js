@@ -1,43 +1,31 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
- * Custom hook for video+audio capture with key frame extraction.
- * 
- * Optimized for mobile:
- * - SMARTER SAMPLING: Caps at 12 frames regardless of length.
- * - ASYNC STOP: Ensures audio blob is ready before returning.
- * - COMPRESSION: Uses JPEG 0.6 quality for faster field uploads.
- * - ROBUST MEDIA: Handles varied mobile MediaRecorder mimeTypes.
+ * Custom hook for video+audio capture.
+ * Records a video/webm blob and sends it whole to the backend.
+ * Gemini File API handles frame selection server-side.
  */
-export function useMediaCapture({ frameInterval = 500 } = {}) {
+export function useMediaCapture() {
     const [status, setStatus] = useState('idle'); // idle | requesting | recording | processing | done | error
-    const [frames, setFrames] = useState([]);
+    const [videoBlob, setVideoBlob] = useState(null);
     const [audioBlob, setAudioBlob] = useState(null);
     const [error, setError] = useState(null);
     const [recordingTime, setRecordingTime] = useState(0);
 
     const streamRef = useRef(null);
     const mediaRecorderRef = useRef(null);
-    const canvasRef = useRef(null);
-    const frameIntervalRef = useRef(null);
+    const audioRecorderRef = useRef(null);
+
     const timerIntervalRef = useRef(null);
+    const chunksRef = useRef([]);
     const audioChunksRef = useRef([]);
-    const framesRef = useRef([]);
-    const hiddenVideoRef = useRef(null);
     const resolveStopRef = useRef(null);
 
-    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            stopAllStreams();
-        };
+        return () => stopAllStreams();
     }, []);
 
     const stopAllStreams = useCallback(() => {
-        if (frameIntervalRef.current) {
-            clearInterval(frameIntervalRef.current);
-            frameIntervalRef.current = null;
-        }
         if (timerIntervalRef.current) {
             clearInterval(timerIntervalRef.current);
             timerIntervalRef.current = null;
@@ -58,108 +46,75 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
         try {
             setStatus('requesting');
             setError(null);
-            setFrames([]);
+            setVideoBlob(null);
             setAudioBlob(null);
             setRecordingTime(0);
-            framesRef.current = [];
+            chunksRef.current = [];
             audioChunksRef.current = [];
 
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
                 audio: true
             });
 
             streamRef.current = stream;
 
-            if (!hiddenVideoRef.current) {
-                hiddenVideoRef.current = document.createElement('video');
-                hiddenVideoRef.current.setAttribute('autoplay', '');
-                hiddenVideoRef.current.setAttribute('playsinline', '');
-                hiddenVideoRef.current.setAttribute('muted', '');
-                hiddenVideoRef.current.muted = true;
-            }
-            hiddenVideoRef.current.srcObject = stream;
-            await hiddenVideoRef.current.play().catch(() => { });
+            // --- 1. Main Video Recorder ---
+            const candidates = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4', ''];
+            const mimeType = candidates.find(t => t === '' || MediaRecorder.isTypeSupported(t)) ?? '';
+            console.log(`[CAPTURE] video mimeType: ${mimeType || 'default'}`);
 
-            if (!canvasRef.current) {
-                canvasRef.current = document.createElement('canvas');
-            }
-
-            // Find best supported mimeType
-            const possibleTypes = [
-                'video/webm;codecs=vp9,opus',
-                'video/webm',
-                'video/mp4',
-                'audio/webm',
-                '' // fallback to browser default
-            ];
-            
-            let mimeType = '';
-            for (const type of possibleTypes) {
-                if (type === '' || MediaRecorder.isTypeSupported(type)) {
-                    mimeType = type;
-                    break;
-                }
-            }
-
-            console.log(`[CAPTURE] Using mimeType: ${mimeType || 'default'}`);
-
-            const options = mimeType ? { mimeType } : {};
-            const mediaRecorder = new MediaRecorder(stream, options);
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
+            const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
             };
 
-            mediaRecorder.onstop = () => {
-                const audioData = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'video/webm' });
-                
-                let capturedFrames = [...framesRef.current];
-                const MAX_TOTAL_FRAMES = 12;
-                
-                if (capturedFrames.length > MAX_TOTAL_FRAMES) {
-                    const sampled = [];
-                    const step = (capturedFrames.length - 1) / (MAX_TOTAL_FRAMES - 1);
-                    for (let i = 0; i < MAX_TOTAL_FRAMES; i++) {
-                        sampled.push(capturedFrames[Math.round(i * step)]);
+            // --- 2. Audio-only Recorder ---
+            const audioStream = new MediaStream(stream.getAudioTracks());
+            const aCandidates = ['audio/webm;codecs=opus', 'audio/webm', ''];
+            const aMimeType = aCandidates.find(t => t === '' || MediaRecorder.isTypeSupported(t)) ?? '';
+            console.log(`[CAPTURE] audio mimeType: ${aMimeType || 'default'}`);
+
+            const audioRecorder = new MediaRecorder(audioStream, aMimeType ? { mimeType: aMimeType } : {});
+            audioRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            // Handling the simultaneous stop event resolution
+            let vBlob = null;
+            let aBlob = null;
+            let stopsLeft = 2;
+
+            const finalizeStop = () => {
+                stopsLeft--;
+                if (stopsLeft === 0) {
+                    setVideoBlob(vBlob);
+                    setAudioBlob(aBlob);
+                    setStatus('done');
+                    if (resolveStopRef.current) {
+                        resolveStopRef.current({ videoBlob: vBlob, audioBlob: aBlob });
+                        resolveStopRef.current = null;
                     }
-                    capturedFrames = sampled;
-                }
-
-                setFrames(capturedFrames);
-                setAudioBlob(audioData);
-                setStatus('done');
-
-                if (resolveStopRef.current) {
-                    resolveStopRef.current({ frames: capturedFrames, audioBlob: audioData });
-                    resolveStopRef.current = null;
                 }
             };
 
-            mediaRecorderRef.current = mediaRecorder;
-            
-            // Start recording after a tiny delay to ensure stream is hot
+            recorder.onstop = () => {
+                vBlob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
+                finalizeStop();
+            };
+
+            audioRecorder.onstop = () => {
+                aBlob = new Blob(audioChunksRef.current, { type: audioRecorder.mimeType || 'audio/webm' });
+                finalizeStop();
+            };
+
+            mediaRecorderRef.current = recorder;
+            audioRecorderRef.current = audioRecorder;
+
             setTimeout(() => {
-                try {
-                    if (mediaRecorder.state === 'inactive') {
-                        mediaRecorder.start(1000);
-                    }
-                } catch (e) {
-                    console.error("MediaRecorder start failed:", e);
-                    setError("Failed to start recorder: " + e.message);
-                    setStatus('error');
-                }
+                if (recorder.state === 'inactive') recorder.start(1000);
+                if (audioRecorder.state === 'inactive') audioRecorder.start(1000);
             }, 100);
-
-            frameIntervalRef.current = setInterval(() => {
-                captureFrame();
-            }, frameInterval);
 
             const startTime = Date.now();
             timerIntervalRef.current = setInterval(() => {
@@ -172,25 +127,6 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             setError(`Failed to start recording: ${err.message}`);
             setStatus('error');
         }
-    }, [frameInterval]);
-
-    const captureFrame = useCallback(() => {
-        const video = hiddenVideoRef.current;
-        if (!video || !canvasRef.current) return;
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-        const canvas = canvasRef.current;
-        const maxWidth = 640;
-        const maxHeight = 480;
-        const scale = Math.min(maxWidth / video.videoWidth, maxHeight / video.videoHeight, 1);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const frameData = canvas.toDataURL('image/jpeg', 0.6);
-        framesRef.current.push(frameData);
     }, []);
 
     const stopRecording = useCallback(() => {
@@ -200,40 +136,36 @@ export function useMediaCapture({ frameInterval = 500 } = {}) {
             resolveStopRef.current = resolve;
             setStatus('processing');
 
-            if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-            captureFrame();
 
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
+            }
+            if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+                audioRecorderRef.current.stop();
             }
 
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
                 streamRef.current = null;
             }
-
-            if (hiddenVideoRef.current) {
-                hiddenVideoRef.current.srcObject = null;
-            }
         });
-    }, [status, captureFrame]);
+    }, [status]);
 
     const reset = useCallback(() => {
         stopAllStreams();
         setStatus('idle');
-        setFrames([]);
+        setVideoBlob(null);
         setAudioBlob(null);
         setError(null);
         setRecordingTime(0);
-        framesRef.current = [];
+        chunksRef.current = [];
         audioChunksRef.current = [];
     }, [stopAllStreams]);
 
     return {
         status,
-        frames,
+        videoBlob,
         audioBlob,
         error,
         recordingTime,

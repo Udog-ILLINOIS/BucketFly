@@ -1,0 +1,195 @@
+{
+  "inspection_id": "20260228_152524_452389",
+  "frame_count": 2,
+  "has_audio": true,
+  "visual_analysis": {
+    "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CYbAzUmwW9MgczYseTHhn'}",
+    "preliminary_status": "UNCLEAR"
+  },
+  "audio_transcription": {
+    "full_text": "Okay, we're starting the pre-run inspection. First up, let's check the tires. Tire 1 looks good. Tire 2 is also fine. Tire 3, no issues. And Tire 4 is properly inflated. Now for the shocks. Shock 1 is set correctly. Shock 2 seems okay. Shock 3 is good. Shock 4 is also within spec. Let's move to the bumpers. Bumper 1 is secure. Bumper 2 is also holding up well. Now, the LiDAR sensor. It's clean and unobstructed. Moving on to the compute module, the NVIDIA Jetson is properly seated. Power system check: Battery is connected. Powerboard looks fine. Antenna is in place. Finally, let's check the undercarriage. Everything appears to be in order.",
+    "segments": [
+      {
+        "text": "Okay, we're starting the pre-run inspection.",
+        "start_time": 0.5,
+        "end_time": 3.0
+      },
+      {
+        "text": "First up, let's check the tires.",
+        "start_time": 3.5,
+        "end_time": 5.0
+      },
+      {
+        "text": "Tire 1 looks good.",
+        "start_time": 5.5,
+        "end_time": 6.5
+      },
+      {
+        "text": "Tire 2 is also fine.",
+        "start_time": 7.0,
+        "end_time": 8.0
+      },
+      {
+        "text": "Tire 3, no issues.",
+        "start_time": 8.5,
+        "end_time": 9.5
+      },
+      {
+        "text": "And Tire 4 is properly inflated.",
+        "start_time": 10.0,
+        "end_time": 11.5
+      },
+      {
+        "text": "Now for the shocks.",
+        "start_time": 12.0,
+        "end_time": 13.0
+      },
+      {
+        "text": "Shock 1 is set correctly.",
+        "start_time": 13.5,
+        "end_time": 14.5
+      },
+      {
+        "text": "Shock 2 seems okay.",
+        "start_time": 15.0,
+        "end_time": 16.0
+      },
+      {
+        "text": "Shock 3 is good.",
+        "start_time": 16.5,
+        "end_time": 17.5
+      },
+      {
+        "text": "Shock 4 is also within spec.",
+        "start_time": 18.0,
+        "end_time": 19.5
+      },
+      {
+        "text": "Let's move to the bumpers.",
+        "start_time": 20.0,
+        "end_time": 21.0
+      },
+      {
+        "text": "Bumper 1 is secure.",
+        "start_time": 21.5,
+        "end_time": 22.5
+      },
+      {
+        "text": "Bumper 2 is also holding up well.",
+        "start_time": 23.0,
+        "end_time": 24.5
+      },
+      {
+        "text": "Now, the LiDAR sensor.",
+        "start_time": 25.0,
+        "end_time": 26.0
+      },
+      {
+        "text": "It's clean and unobstructed.",
+        "start_time": 26.5,
+        "end_time": 27.5
+      },
+      {
+        "text": "Moving on to the compute module, the NVIDIA Jetson is properly seated.",
+        "start_time": 28.0,
+        "end_time": 31.0
+      },
+      {
+        "text": "Power system check: Battery is connected.",
+        "start_time": 31.5,
+        "end_time": 33.0
+      },
+      {
+        "text": "Powerboard looks fine.",
+        "start_time": 33.5,
+        "end_time": 34.5
+      },
+      {
+        "text": "Antenna is in place.",
+        "start_time": 35.0,
+        "end_time": 36.0
+      },
+      {
+        "text": "Finally, let's check the undercarriage.",
+        "start_time": 36.5,
+        "end_time": 38.0
+      },
+      {
+        "text": "Everything appears to be in order.",
+        "start_time": 38.5,
+        "end_time": 40.0
+      }
+    ],
+    "components_mentioned": [
+      {
+        "name": "Tire 1 (Front Left)",
+        "timestamp": 6.0
+      },
+      {
+        "name": "Tire 2 (Front Right)",
+        "timestamp": 7.5
+      },
+      {
+        "name": "Tire 3 (Rear Left)",
+        "timestamp": 9.0
+      },
+      {
+        "name": "Tire 4 (Rear Right)",
+        "timestamp": 11.0
+      },
+      {
+        "name": "Shock 1 (Front Left)",
+        "timestamp": 14.0
+      },
+      {
+        "name": "Shock 2 (Front Right)",
+        "timestamp": 15.5
+      },
+      {
+        "name": "Shock 3 (Rear Left)",
+        "timestamp": 17.0
+      },
+      {
+        "name": "Shock 4 (Rear Right)",
+        "timestamp": 19.0
+      },
+      {
+        "name": "Bumper 1 (Front)",
+        "timestamp": 22.0
+      },
+      {
+        "name": "Bumper 2 (Rear)",
+        "timestamp": 24.0
+      },
+      {
+        "name": "LiDAR",
+        "timestamp": 25.5
+      },
+      {
+        "name": "NVIDIA Jetson",
+        "timestamp": 30.0
+      },
+      {
+        "name": "Battery",
+        "timestamp": 32.5
+      },
+      {
+        "name": "Powerboard",
+        "timestamp": 34.0
+      },
+      {
+        "name": "Antenna",
+        "timestamp": 35.5
+      },
+      {
+        "name": "Undercarriage",
+        "timestamp": 37.5
+      }
+    ],
+    "processing_time_seconds": 5.6
+  },
+  "cross_reference": {
+    "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CYbAzuTznbQzahoJsH3Mm'}"
+  },
+  "final_status": "UNCLEAR"
+}
