@@ -16,7 +16,7 @@ import './CaptureZone.css';
  */
 const IDENTIFY_INTERVAL_MS = 3000; // Send a frame every 3 seconds
 
-export function CaptureZone({ onInspectionComplete, checklistState = {}, onRecordingStart, onItemIdentified }) {
+export function CaptureZone({ onInspectionComplete, checklistState = {}, onRecordingStart, onItemIdentified, machineType = 'cat_ta1' }) {
     const {
         status,
         frames,
@@ -48,7 +48,7 @@ export function CaptureZone({ onInspectionComplete, checklistState = {}, onRecor
 
                 isIdentifyingRef.current = true;
                 try {
-                    const result = await identifyFrame(frame, checklistState);
+                    const result = await identifyFrame(frame, checklistState, machineType);
                     setIdentification(result);
                     // Update checklist in real-time when HIGH confidence item detected
                     if (result && result.checklist_item && result.checklist_item !== 'None' 

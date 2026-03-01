@@ -1,6 +1,9 @@
 /**
  * Mock inspection results for dev testing.
  * Each entry simulates a full AI pipeline response.
+ *
+ * MOCK_RESULTS        → CAT 982 Wheel Loader (existing)
+ * MOCK_RESULTS_F1TENTH → F1Tenth RoboRacer (new)
  */
 
 function mock(label, id, status, component, confidence, observations, concerns, cotVisual, audio, items, cotCrossRef) {
@@ -29,6 +32,181 @@ function mock(label, id, status, component, confidence, observations, concerns, 
     },
   };
 }
+
+function mockF1(label, id, status, component, confidence, observations, concerns, cotVisual, audio, items, cotCrossRef) {
+  return {
+    label,
+    inspection_id: id,
+    final_status: status,
+    machineType: 'f1tenth',
+    visual_analysis: {
+      component,
+      preliminary_status: status,
+      confidence,
+      condition_observations: observations,
+      concerns,
+      chain_of_thought: cotVisual,
+    },
+    audio_transcription: {
+      full_text: audio.text,
+      segments: [],
+      components_mentioned: audio.components,
+    },
+    cross_reference: {
+      final_status: status,
+      confidence,
+      items_evaluated: items,
+      chain_of_thought: cotCrossRef,
+    },
+  };
+}
+
+export const MOCK_RESULTS_F1TENTH = [
+  mockF1(
+    'Chassis Frame — PASS (Green)', 'f1-mock-001', 'PASS',
+    'Chassis Frame & Body', 0.91,
+    ['Frame rails straight with no visible cracks', 'All body clips present and seated', 'Mounting points intact'],
+    [],
+    {
+      observations: 'The Traxxas Slash 4x4 chassis frame rails are straight and free of cracks. Body clips are present on all posts. No bent or broken mounting points.',
+      component_identification: 'Chassis frame and body on an F1Tenth RoboRacer autonomous car.',
+      condition_assessment: 'Chassis is in good structural condition.',
+      conclusion: 'PASS — Chassis frame and body are intact and acceptable for operation.',
+    },
+    {
+      text: 'Frame looks straight, no cracks, all the body clips are there.',
+      components: [{ name: 'chassis', timestamp: 0.5 }],
+    },
+    [{
+      checklist_mapped_item: '1.1 Chassis Frame & Body',
+      checklist_grade: 'Green',
+      verdict_reasoning: 'Frame rails straight, no cracks, body clips present. No issues detected.',
+      recommendation: 'No action required.',
+    }],
+    {
+      audio_says: 'Operator confirms frame is straight and body clips are present.',
+      visual_shows: 'AI confirms straight frame rails, no cracks, intact mounting points.',
+      comparison: 'AGREE — Chassis passes inspection.',
+      checklist_mapping_reasoning: 'Maps to checklist item 1.1 Chassis Frame & Body.',
+    },
+  ),
+
+  mockF1(
+    'Wheels — FAIL (Red)', 'f1-mock-002', 'FAIL',
+    'Wheels & Tires', 0.95,
+    ['Rear-left wheel nut missing — wheel has axial play', 'Tire bead partially unseated on rear-right'],
+    ['Wheel detachment risk at speed', 'Loss of vehicle control'],
+    {
+      observations: 'The rear-left wheel has no locking nut — the wheel wobbles axially when pushed. The rear-right tire bead is partially unseated from the rim on one side.',
+      component_identification: 'Wheels and tires on an F1Tenth RoboRacer.',
+      condition_assessment: 'Critical finding. Missing wheel nut and unseated tire bead both pose immediate loss-of-control hazards.',
+      conclusion: 'FAIL — Wheel nut missing and tire bead unseated. Vehicle must NOT operate.',
+    },
+    {
+      text: 'Rear left wheel is wobbly, I think the nut is gone. And the rear right tire looks like it came off the rim a bit.',
+      components: [{ name: 'wheel', timestamp: 0.4 }, { name: 'tire', timestamp: 1.6 }],
+    },
+    [{
+      checklist_mapped_item: '1.2 Wheels & Tires',
+      checklist_grade: 'Red',
+      verdict_reasoning: 'Missing wheel nut on rear-left and unseated tire bead on rear-right. Both are critical failures — vehicle cannot safely operate.',
+      recommendation: 'Install correct wheel nut on rear-left. Re-seat rear-right tire bead and verify all four wheel nuts are torqued. Re-inspect before operation.',
+    }],
+    {
+      audio_says: 'Operator reports missing wheel nut and partially unseated tire bead.',
+      visual_shows: 'AI confirms axial wheel play and partially unseated tire bead.',
+      comparison: 'AGREE — Critical wheel/tire failure confirmed.',
+      checklist_mapping_reasoning: 'Maps to checklist item 1.2 Wheels & Tires.',
+    },
+  ),
+
+  mockF1(
+    'Jetson Xavier NX — PASS (Green)', 'f1-mock-003', 'PASS',
+    'Jetson Xavier NX (Compute)', 0.92,
+    ['Jetson booted — login prompt visible on serial console', 'Fan spinning at low speed', 'Board temperature 38°C — within normal range', 'Mounting screws tight'],
+    [],
+    {
+      observations: 'The Jetson Xavier NX is fully booted with the login prompt visible. The cooling fan is spinning. Board temperature reads 38°C which is well within the acceptable range. All four mounting screws are tight.',
+      component_identification: 'NVIDIA Jetson Xavier NX compute module on an F1Tenth RoboRacer.',
+      condition_assessment: 'Jetson is operational, thermally healthy, and securely mounted.',
+      conclusion: 'PASS — Jetson Xavier NX is functional and ready for operation.',
+    },
+    {
+      text: 'Jetson is booted up, fan is running, temperature looks fine at 38 degrees.',
+      components: [{ name: 'jetson', timestamp: 0.7 }],
+    },
+    [{
+      checklist_mapped_item: '2.1 Jetson Xavier NX (Compute)',
+      checklist_grade: 'Green',
+      verdict_reasoning: 'Jetson booted, fan running, temperature 38°C, mounting secure. All checks pass.',
+      recommendation: 'No action required.',
+    }],
+    {
+      audio_says: 'Operator confirms Jetson is booted and temperature is normal.',
+      visual_shows: 'AI confirms boot state, fan operation, and acceptable thermal reading.',
+      comparison: 'AGREE — Jetson passes inspection.',
+      checklist_mapping_reasoning: 'Maps to checklist item 2.1 Jetson Xavier NX (Compute).',
+    },
+  ),
+
+  mockF1(
+    'LiDAR Unit — MONITOR (Yellow)', 'f1-mock-004', 'MONITOR',
+    'LiDAR Unit', 0.83,
+    ['LiDAR spinning normally', 'USB cable connector slightly loose at the sensor end — can be wiggled by hand', 'Scan data present but drops occasionally'],
+    ['Loose cable could cause scan dropouts mid-run'],
+    {
+      observations: 'The LiDAR is spinning at normal speed and scan data is streaming. However, the USB cable connector at the sensor end can be wiggled by hand — it is not fully seated. Scan data shows occasional brief dropouts correlated with vibration.',
+      component_identification: 'LiDAR sensor (Hokuyo / RPLiDAR) on an F1Tenth RoboRacer.',
+      condition_assessment: 'LiDAR functional but USB connection is insecure. Dropouts could cause the autonomous algorithm to lose scan data mid-run.',
+      conclusion: 'MONITOR — LiDAR spinning and scanning but USB connector is loose.',
+    },
+    {
+      text: 'LiDAR is spinning and data is coming through but the cable connector feels loose. Seeing a couple of scan dropouts.',
+      components: [{ name: 'lidar', timestamp: 0.9 }, { name: 'usb cable', timestamp: 2.1 }],
+    },
+    [{
+      checklist_mapped_item: '2.2 LiDAR Unit',
+      checklist_grade: 'Yellow',
+      verdict_reasoning: 'Loose USB connector causing intermittent scan dropouts. Functional but unreliable under vibration.',
+      recommendation: 'Re-seat USB connector and secure with a small zip tie or cable lock. Re-test scan continuity before full-speed run.',
+    }],
+    {
+      audio_says: 'Operator reports spinning LiDAR with loose cable and occasional dropouts.',
+      visual_shows: 'AI confirms LiDAR operation but loose USB connector at sensor end.',
+      comparison: 'AGREE — LiDAR operational but needs cable secured.',
+      checklist_mapping_reasoning: 'Maps to checklist item 2.2 LiDAR Unit.',
+    },
+  ),
+
+  mockF1(
+    'Power Distribution Board — FAIL (Red)', 'f1-mock-005', 'FAIL',
+    'Power Distribution Board', 0.96,
+    ['Scorch mark visible on power board near 5V rail regulator', 'One output connector melted/deformed', '5V rail reading 4.1V — below minimum for Jetson'],
+    ['Risk of further electrical failure', 'Jetson undervoltage could cause crash mid-run'],
+    {
+      observations: 'A visible scorch mark is present on the power distribution board near the 5V regulator. One of the JST output connectors is visibly melted and deformed. The 5V rail is measuring 4.1V — below the 4.75V minimum required by the Jetson.',
+      component_identification: 'Power distribution board on an F1Tenth RoboRacer.',
+      condition_assessment: 'Critical failure. Scorching indicates a previous overcurrent or heat event. The melted connector and low rail voltage mean the board cannot reliably power the compute stack.',
+      conclusion: 'FAIL — Power board scorched with degraded 5V output. Vehicle must NOT operate.',
+    },
+    {
+      text: 'There is a burn mark on the power board and one connector looks melted. The 5 volt rail is only showing 4.1.',
+      components: [{ name: 'power board', timestamp: 0.6 }, { name: '5V rail', timestamp: 1.9 }],
+    },
+    [{
+      checklist_mapped_item: '2.3 Power Distribution Board',
+      checklist_grade: 'Red',
+      verdict_reasoning: 'Scorch mark, melted connector, and 5V rail at 4.1V. Board has suffered thermal damage and cannot reliably power the vehicle. Critical failure.',
+      recommendation: 'Do NOT operate. Replace power distribution board. Investigate root cause of overcurrent event before installing replacement. Verify all downstream components after replacement.',
+    }],
+    {
+      audio_says: 'Operator confirms burn mark, melted connector, and low 5V rail voltage.',
+      visual_shows: 'AI confirms scorch mark on board, deformed connector, and undervoltage on 5V rail.',
+      comparison: 'AGREE — Critical power board failure confirmed.',
+      checklist_mapping_reasoning: 'Maps to checklist item 2.3 Power Distribution Board.',
+    },
+  ),
+];
 
 export const MOCK_RESULTS = [
   mock(
@@ -312,6 +490,64 @@ export const MOCK_RESULTS = [
       audio_says: 'Operator reports hydraulic oil is well below the red line on the sight glass.',
       visual_shows: 'AI vision confirms hydraulic fluid level is critically below the red minimum indicator line.',
       comparison: 'AGREE — Both operator and AI confirm critically low hydraulic oil below the red service line.',
+      checklist_mapping_reasoning: 'Maps directly to checklist item 1.13 Hydraulic fluid tank, inspect.',
+    },
+  ),
+
+  mock(
+    'Access Steps (Surface Rust) — PASS (Green)', 'mock-video-steps', 'PASS',
+    'Steps and Handrails', 0.90,
+    ['Minor surface rust on lower edge of bottom step', 'Anti-slip tread surface intact across all steps', 'Step mounting welds appear sound', 'No structural deformation or sharp edges'],
+    [],
+    {
+      observations: 'The access steps on the side of the CAT machine show two-step ladder with textured anti-slip treads. The bottom step has minor surface rust on its lower edge/rim — cosmetic oxidation on bare metal from outdoor exposure. The tread surface itself is intact. Inspector in hi-vis vest is pointing to the steps.',
+      component_identification: 'Access steps / entry ladder on a Caterpillar 982 Medium Wheel Loader — checklist item 1.9 Steps and Handrails.',
+      condition_assessment: 'Surface rust on the lower edge of the bottom step is cosmetic and does not affect structural integrity or the anti-slip function. Steps are securely mounted. No sharp edges or deformation.',
+      conclusion: 'PASS — Steps are in acceptable working condition. Surface rust is normal outdoor wear on bare metal, not a structural concern.',
+    },
+    {
+      text: 'Steps look good. There is some rust on the bottom edge of the lower step but the treads are solid and the mounting is secure.',
+      components: [{ name: 'steps and handrails', timestamp: 1.5 }],
+    },
+    [{
+      checklist_mapped_item: '1.9 Steps and Handrails',
+      checklist_grade: 'Green',
+      verdict_reasoning: 'Surface rust on the lower edge of the bottom step is cosmetic — bare metal oxidation from outdoor exposure. Anti-slip tread is intact, mounting hardware is secure, no structural compromise. Inspector confirmed acceptable.',
+      recommendation: 'No action required. Monitor at next inspection for any progression to structural rust.',
+    }],
+    {
+      audio_says: 'Operator notes surface rust on bottom step edge but confirms treads and mounting are solid.',
+      visual_shows: 'AI vision detects minor surface rust on bottom step lower rim. Anti-slip tread fully intact. Mounting secure.',
+      comparison: 'AGREE — Both operator and AI confirm cosmetic rust only. Component is structurally sound and GREEN.',
+      checklist_mapping_reasoning: 'Maps to checklist item 1.9 Steps and Handrails.',
+    },
+  ),
+
+  mock(
+    'Hydraulic Fluid Sight Gauge — FAIL (Red)', 'mock-video-hydraulic', 'FAIL',
+    'Hydraulic fluid tank sight gauge', 0.96,
+    ['Hydraulic fluid level below the red minimum indicator line', 'Sight glass shows critically low fluid', 'Fluid loss or severe consumption indicated'],
+    ['Risk of hydraulic pump cavitation', 'Potential system damage if operated'],
+    {
+      observations: 'Close-up of a CAT hydraulic fluid sight gauge mounted on the machine body. The sight gauge indicator rod is positioned below the red minimum line — fluid level is critically low. A hydraulic fluid symbol sticker is mounted to the left of the gauge. Inspector in gloves is pointing at the gauge level.',
+      component_identification: 'Hydraulic oil level sight gauge on a Caterpillar 982 Medium Wheel Loader — checklist item 1.13 Hydraulic fluid tank, inspect.',
+      condition_assessment: 'Critical finding. Hydraulic fluid is below the red minimum line, indicating severe fluid loss or consumption. Machine must not be operated.',
+      conclusion: 'FAIL — Hydraulic fluid level is critically below the red indicator line. Immediate action required before operation.',
+    },
+    {
+      text: 'Hydraulic oil is way below the red line on the sight glass. Level is critically low.',
+      components: [{ name: 'hydraulic fluid tank', timestamp: 4.5 }],
+    },
+    [{
+      checklist_mapped_item: '1.13 Hydraulic fluid tank, inspect',
+      checklist_grade: 'Red',
+      verdict_reasoning: 'Sight gauge indicator is below the red minimum line. Hydraulic fluid level is critically low — severe fluid loss or consumption detected. Machine must not be operated.',
+      recommendation: 'Do not operate machine. Inspect hydraulic system for leaks. Check all hose connections, cylinder seals, and pump fittings. Top off with CAT HYDO Advanced 10W fluid and investigate root cause of fluid loss.',
+    }],
+    {
+      audio_says: 'Operator reports hydraulic oil is well below the red line on the sight glass.',
+      visual_shows: 'AI vision confirms sight gauge indicator is below the red minimum line — hydraulic fluid level critically low.',
+      comparison: 'AGREE — Both operator and AI confirm hydraulic fluid is critically below the red minimum indicator line.',
       checklist_mapping_reasoning: 'Maps directly to checklist item 1.13 Hydraulic fluid tank, inspect.',
     },
   ),

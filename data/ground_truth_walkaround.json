@@ -1,0 +1,183 @@
+{
+  "_meta": {
+    "source_video": "Create_a_video_of_an_inspector_doing_a_walktrhough_acaf751899.mp4",
+    "machine": "CATERPILLAR 982",
+    "inspection_type": "TA1 Daily Walkaround",
+    "purpose": "Ground truth expected output for automated evaluation",
+    "overall_verdict": "FAIL — Multiple Red-grade defects requiring immediate action before operation"
+  },
+
+  "inspection_id": "GROUND_TRUTH_WALKAROUND_982",
+  "frame_count": 96,
+  "has_audio": true,
+
+  "visual_analysis": {
+    "chain_of_thought": {
+      "observations": "The inspector walks the full perimeter of a Caterpillar 982 wheel loader on a dirt worksite. Multiple issues are observed across the ground-level pass and engine compartment check. Left-front tire is visibly flat with zero pressure, sidewall collapsed. Bucket cutting edge is heavily worn with two missing ground-engaging tips and measurable edge recession. Steps on the operator side are dented and partially deformed. A puddle of hydraulic fluid is visible beneath the machine near the rear axle area. Hydraulic tank sight glass shows fluid level below the minimum mark. Engine compartment reveals bent fins on the heat exchanger radiator core with approximately 30% fin damage.",
+      "component_identification": "Full TA1 walkaround covering: (1.1) Front-left tire and rim, (1.2) Bucket cutting edge and tips, (1.3) Bucket tilt cylinders and hoses, (1.9) Operator-side steps and handrails, (1.12) Rear axle / duo-cone seal area, (1.13) Hydraulic fluid tank, (2.3) Radiator core / heat exchanger fins.",
+      "condition_assessment": "Three safety-critical failures present: flat tire creates unstable load bearing; missing bucket tips create asymmetric dig forces and potential tip ejection hazard; hydraulic fluid below minimum risks system cavitation and structural failure. Two monitored conditions: dented step reduces slip resistance; bent radiator fins reduce cooling capacity and risk thermal overrun on extended cycles.",
+      "conclusion": "Machine must be placed out of service immediately. Three FAIL-grade findings (1.1, 1.2, 1.13) and two MONITOR-grade findings (1.9, 2.3) confirmed. Do not operate until Red items are resolved."
+    },
+    "component": "CATERPILLAR 982 Full Walkaround",
+    "condition_observations": [
+      "Left-front tire completely flat — sidewall collapsed, rim contact visible",
+      "Bucket cutting edge worn 60%+ from original profile; two ground-engaging tips missing",
+      "Operator-side step platform dented and partially bent outward",
+      "Hydraulic fluid puddle beneath rear axle — approximately 1 liter pooled",
+      "Hydraulic tank sight glass reading below MIN mark",
+      "Radiator core fins bent and matted in upper-right quadrant — ~30% fin area compromised",
+      "Bucket tilt cylinder rods and hoses appear clean and dry — no leaks detected",
+      "Overall machine frame and ROPS structure appear intact with no visible cracks"
+    ],
+    "preliminary_status": "FAIL",
+    "confidence": 0.95,
+    "concerns": [
+      "Flat tire (1.1): Machine must not be moved — immediate tire service required",
+      "Missing bucket tips (1.2): Tip ejection risk during dig operations",
+      "Low hydraulic fluid (1.13): System cavitation risk if operated",
+      "Dented steps (1.9): Reduced slip resistance, fall hazard for operator egress",
+      "Bent radiator fins (2.3): Cooling capacity degraded, thermal risk in high-load cycles"
+    ],
+    "processing_time_seconds": 6.2
+  },
+
+  "audio_transcription": {
+    "full_text": "Alright, starting the walkaround on machine 982. Coming around the front — left front tire is completely flat, she's sitting on the rim. That's an immediate stop-work. Moving to the bucket — cutting edge is heavily worn, and I can see two tips missing on the left side, that's a Red. Cylinders and hoses look clean, no leaks there. Coming around to the steps — the step platform is dented, bent inward. I'd call that a Yellow, still passable but needs attention. Coming around the back — I can see fluid on the ground under the rear axle, looks like hydraulic fluid. Checking the tank — sight glass is below minimum, confirming the fluid loss. That's another Red. Opening the engine compartment now. Radiator fins are bent on the upper corner, maybe a third of them. I'd call that a Yellow. Overall this machine is grounded — minimum three Reds. Do not operate.",
+    "segments": [
+      {
+        "text": "Alright, starting the walkaround on machine 982.",
+        "start_time": 0.5,
+        "end_time": 3.2,
+        "component_mentioned": null
+      },
+      {
+        "text": "Coming around the front — left front tire is completely flat, she's sitting on the rim. That's an immediate stop-work.",
+        "start_time": 3.5,
+        "end_time": 10.1,
+        "component_mentioned": "front tire and rim"
+      },
+      {
+        "text": "Moving to the bucket — cutting edge is heavily worn, and I can see two tips missing on the left side, that's a Red.",
+        "start_time": 10.5,
+        "end_time": 18.4,
+        "component_mentioned": "bucket cutting edge and ground-engaging tips"
+      },
+      {
+        "text": "Cylinders and hoses look clean, no leaks there.",
+        "start_time": 19.0,
+        "end_time": 22.5,
+        "component_mentioned": "bucket tilt cylinders and hoses"
+      },
+      {
+        "text": "Coming around to the steps — the step platform is dented, bent inward. I'd call that a Yellow, still passable but needs attention.",
+        "start_time": 23.0,
+        "end_time": 30.8,
+        "component_mentioned": "steps and handrails"
+      },
+      {
+        "text": "Coming around the back — I can see fluid on the ground under the rear axle, looks like hydraulic fluid.",
+        "start_time": 31.5,
+        "end_time": 39.0,
+        "component_mentioned": "hydraulic fluid"
+      },
+      {
+        "text": "Checking the tank — sight glass is below minimum, confirming the fluid loss. That's another Red.",
+        "start_time": 39.5,
+        "end_time": 46.2,
+        "component_mentioned": "hydraulic fluid tank"
+      },
+      {
+        "text": "Opening the engine compartment now. Radiator fins are bent on the upper corner, maybe a third of them. I'd call that a Yellow.",
+        "start_time": 47.0,
+        "end_time": 56.3,
+        "component_mentioned": "radiator core"
+      },
+      {
+        "text": "Overall this machine is grounded — minimum three Reds. Do not operate.",
+        "start_time": 57.0,
+        "end_time": 62.5,
+        "component_mentioned": null
+      }
+    ],
+    "components_mentioned": [
+      { "name": "front tire and rim", "timestamp": 5.0 },
+      { "name": "bucket cutting edge and ground-engaging tips", "timestamp": 13.0 },
+      { "name": "bucket tilt cylinders and hoses", "timestamp": 20.0 },
+      { "name": "steps and handrails", "timestamp": 26.0 },
+      { "name": "hydraulic fluid", "timestamp": 35.0 },
+      { "name": "hydraulic fluid tank", "timestamp": 42.0 },
+      { "name": "radiator core", "timestamp": 51.0 }
+    ],
+    "processing_time_seconds": 5.1
+  },
+
+  "cross_reference": {
+    "final_status": "FAIL",
+    "confidence": 0.96,
+    "checklist_mapped_item": "1.1 Tires and Rims (PRIMARY — FAIL); 1.2 Bucket Cutting Edge, Tips, or Moldboard (FAIL); 1.9 Steps and Handrails (MONITOR); 1.13 Hydraulic fluid tank (FAIL); 2.3 Check Radiator Cores for Debris (MONITOR)",
+    "checklist_grade": "Red",
+    "verdict_reasoning": "Operator audio and visual AI analysis are in full agreement. Three Red-grade findings make this machine inoperable per Caterpillar TA1 standards: (1) Left-front tire is flat — confirmed visually and verbally; (2) Bucket cutting edge is heavily worn with two missing tips — confirmed visually and verbally; (3) Hydraulic tank is below minimum with active fluid loss from rear axle — confirmed visually and verbally. Two Yellow-grade findings are also documented: dented operator-side steps (1.9) and bent radiator fins (2.3). Historical data for this machine (982) shows the flat tire and hydraulic fluid issue have not been previously recorded, indicating these are new failures. Machine must be removed from service immediately.",
+    "clarification_question": null,
+    "recommendation": "IMMEDIATE ACTION REQUIRED: (1) Do not move or operate machine 982. (2) Dispatch tire service to replace left-front tire. (3) Locate and repair hydraulic fluid leak at rear axle/duo-cone area; top off hydraulic tank to proper level. (4) Order and replace two missing bucket tips and assess cutting edge for full replacement. (5) Schedule non-critical work orders for step repair (1.9) and radiator fin straightening (2.3) within 5 operating days.",
+    "chain_of_thought": {
+      "audio_says": "Inspector verbally confirmed: flat left-front tire (Red), worn bucket with two missing tips (Red), clean cylinders (Pass), dented steps (Yellow), hydraulic fluid loss beneath rear axle with tank below minimum (Red), bent radiator fins (Yellow). Inspector verbally declared machine grounded.",
+      "visual_shows": "Visual frames confirm: collapsed tire sidewall on left-front, heavily worn cutting edge profile with two empty tip pockets, clean cylinder rods, dented step platform, hydraulic fluid pooled under rear axle, sight glass below MIN, bent radiator fins in upper-right quadrant approximately 30% fin area.",
+      "comparison": "Audio and visual are in full agreement across all seven inspection points. No discrepancies detected. Confidence is high.",
+      "checklist_mapping_reasoning": "All findings mapped directly to official TA1 checklist: flat tire → 1.1 (Red), bucket wear/tips → 1.2 (Red), tilt cylinders → 1.3 (Green), steps → 1.9 (Yellow), hydraulic fluid loss and tank level → 1.13 (Red), radiator fins → 2.3 (Yellow). Axle seal leak also suggests 1.12 concern pending closer inspection."
+    },
+    "processing_time_seconds": 4.9
+  },
+
+  "walkaround_findings": [
+    {
+      "checklist_item": "1.1",
+      "part_name": "Tires and Rims",
+      "grade": "Red",
+      "final_status": "FAIL",
+      "finding": "Left-front tire completely flat — sidewall collapsed, rim contact. Machine must not be moved.",
+      "action_required": "Immediate tire replacement before operation"
+    },
+    {
+      "checklist_item": "1.2",
+      "part_name": "Bucket Cutting Edge, Tips, or Moldboard",
+      "grade": "Red",
+      "final_status": "FAIL",
+      "finding": "Cutting edge worn 60%+ from original profile. Two ground-engaging tips missing from left side.",
+      "action_required": "Replace missing tips; assess cutting edge for full replacement"
+    },
+    {
+      "checklist_item": "1.3",
+      "part_name": "Bucket Tilt Cylinders and Hoses",
+      "grade": "Green",
+      "final_status": "PASS",
+      "finding": "Cylinder rods clean and dry. Hose connections show no leaks or visible damage.",
+      "action_required": null
+    },
+    {
+      "checklist_item": "1.9",
+      "part_name": "Steps and Handrails",
+      "grade": "Yellow",
+      "final_status": "MONITOR",
+      "finding": "Operator-side step platform dented and partially bent outward. Slip resistance reduced.",
+      "action_required": "Schedule repair within 5 operating days"
+    },
+    {
+      "checklist_item": "1.13",
+      "part_name": "Hydraulic fluid tank",
+      "grade": "Red",
+      "final_status": "FAIL",
+      "finding": "Sight glass below MIN mark. Active hydraulic fluid leak pooled beneath rear axle (~1 liter on ground).",
+      "action_required": "Locate and repair leak source; refill hydraulic fluid to proper level before operation"
+    },
+    {
+      "checklist_item": "2.3",
+      "part_name": "Check Radiator Cores for Debris",
+      "grade": "Yellow",
+      "final_status": "MONITOR",
+      "finding": "Heat exchanger fins bent and matted in upper-right quadrant — approximately 30% fin area compromised. Cooling capacity reduced.",
+      "action_required": "Straighten fins with fin comb tool; schedule within 5 operating days. Monitor engine temperature closely."
+    }
+  ],
+
+  "final_status": "FAIL"
+}

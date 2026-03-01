@@ -33,6 +33,41 @@ body, html, #root {
   position: relative;
 }
 
+/* Machine Selector Bar */
+.machine-selector-bar {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  background-color: #111;
+  border-bottom: 1px solid #333;
+  padding: 6px 8px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.machine-selector-btn {
+  flex: 1;
+  padding: 6px 10px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.machine-selector-btn.active {
+  background: var(--cat-yellow);
+  color: var(--cat-black);
+  border-color: var(--cat-yellow);
+  font-weight: 700;
+}
+
 /* Tab Content Container */
 .tab-content {
   flex: 1;

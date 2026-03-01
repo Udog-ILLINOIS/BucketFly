@@ -1,0 +1,78 @@
+[
+    {
+        "part_id": "1.1",
+        "part_name": "Tires and Rims",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Inspect for deep cuts, lug damage, and rim seat condition. Check for loose or missing wheel nut hardware.",
+        "known_issues": [
+            "Flat Wheel (Red Grade)"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_1_tires.png"
+    },
+    {
+        "part_id": "1.2",
+        "part_name": "Bucket Cutting Edge, Tips, or Moldboard",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Inspect for excessive wear, cracks, or missing tips. Check hardware for tightness.",
+        "known_issues": [
+            "Significant wear on teeth (Red Grade)",
+            "Worn cutting edge"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_2_bucket.png"
+    },
+    {
+        "part_id": "1.3",
+        "part_name": "Bucket Tilt Cylinders and Hoses",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Check for leaks on rod seals and hose connections. Inspect rods for scoring or nicks.",
+        "known_issues": [],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_3_cylinders.png"
+    },
+    {
+        "part_id": "1.9",
+        "part_name": "Steps and Handrails",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Inspect for bent, missing, or loose hardware. Ensure all surfaces are clean and provide good footing.",
+        "known_issues": [
+            "Dented Steps (Yellow Grade)"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_9_steps.png"
+    },
+    {
+        "part_id": "1.12",
+        "part_name": "Axles- Final Drives, Differentials, Brakes, Duo-cone Seals",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Inspect for leaks around duo-cone seals and differential housings.",
+        "known_issues": [
+            "Seized Pin (Red Grade)"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_12_axles.png"
+    },
+    {
+        "part_id": "1.13",
+        "part_name": "Hydraulic fluid tank, inspect",
+        "section": "FROM THE GROUND",
+        "inspection_standard": "Check fluid level via sight glass. Inspect for external leaks or damage to the tank body.",
+        "known_issues": [
+            "Hydraulic Fluid Low (Red Grade)"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_1_13_hydraulic_tank.png"
+    },
+    {
+        "part_id": "2.3",
+        "part_name": "Check Radiator Cores for Debris",
+        "section": "ENGINE COMPARTMENT",
+        "inspection_standard": "Ensure heat exchanger fins are straight and free of debris for optimal cooling.",
+        "known_issues": [
+            "Bent Fins Heat Exchanger (Yellow Grade)"
+        ],
+        "machine_model": "CATERPILLAR 982",
+        "image_url": "/data/assets/ti_2_3_radiator.png"
+    }
+]

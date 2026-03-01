@@ -159,8 +159,247 @@ TRAINING_CATALOG = {
             "why_actually_green": "Tire shows minor uneven wear patterns that are within normal operating tolerances for heavy equipment. Tread depth is still adequate. No cord exposure, no sidewall damage, no chunks missing. Slight unevenness is common and does not indicate immediate failure.",
             "lesson": "Minor uneven tire wear is NORMAL on heavy equipment due to loading patterns and terrain. Only flag tires as Yellow if tread is approaching minimum, or Red if cord is exposed or there is sidewall damage.",
         },
+        {
+            "filename": "InspectionStepsGreen.jpg",
+            "component": "Steps and Handrails",
+            "checklist_item": "1.9 Steps and Handrails",
+            "correct_grade": "Green",
+            "ai_mistake": "AI flagged surface rust on bottom step edge as Yellow/MONITOR",
+            "why_actually_green": "Real inspection footage of CAT machine access steps. Steps show surface rust on the lower edge of the bottom step — this is cosmetic oxidation from outdoor exposure on bare metal. Anti-slip tread surface is intact and functional. All mounting welds are sound. Structure supports operator weight safely. Inspector confirmed GREEN.",
+            "lesson": "Surface rust on the edge of access steps is NORMAL on outdoor heavy equipment. Only flag Yellow if rust has caused structural thinning, sharp edges, or compromised the anti-slip surface. Only flag Red if the step is cracked, bent, or detached.",
+        },
+        {
+            "filename": "HydraulicGaugeLevelGreen.jpg",
+            "component": "Hydraulic fluid tank sight gauge",
+            "checklist_item": "1.13 Hydraulic fluid tank, inspect",
+            "correct_grade": "Green",
+            "ai_mistake": "AI flagged the sight gauge reading as ambiguous or low",
+            "why_actually_green": "Real inspection footage of a CAT hydraulic fluid sight gauge. The fluid level indicator (float/rod) is visible in the green zone of the gauge — above the minimum mark and within the acceptable operating band. The hydraulic symbol sticker is present and undamaged. No weeping, staining, or leaks around the gauge housing. Inspector confirmed GREEN.",
+            "lesson": "A hydraulic sight gauge showing the indicator in the green/acceptable band is a PASS even if the fluid appears slightly below the center. Only flag Red if the indicator is at or below the red MIN mark. Only flag Yellow if the level is in the low-normal range trending toward minimum.",
+        },
     ],
 }
+
+
+# ─────────────────────────────────────────────────────
+# F1TENTH TRAINING CATALOG — ALL GREEN (passing examples)
+# Images from data/F1Tenth/
+# ─────────────────────────────────────────────────────
+
+F1TENTH_TRAINING_CATALOG = {
+    "green": [
+        {
+            "filename": "IMG_9912.jpg",
+            "component": "Chassis Frame & Body",
+            "checklist_item": "1.1 Chassis Frame & Body",
+            "grade": "Green",
+            "reason": "Chassis frame is structurally intact. No cracks, bends, or loose mounting hardware visible. Body panels are aligned and securely fastened.",
+            "visual_indicators": [
+                "Frame rails are straight with no visible deformation",
+                "Body screws and standoffs are present and tight",
+                "No cracked or broken plastic body panels",
+            ],
+        },
+        {
+            "filename": "IMG_9913.jpg",
+            "component": "Wheels & Tires",
+            "checklist_item": "1.2 Wheels & Tires",
+            "grade": "Green",
+            "reason": "Wheels are securely mounted, tires are properly seated on rims with adequate tread. No wobble, cracks, or missing hardware.",
+            "visual_indicators": [
+                "Wheel hex is fully engaged on axle",
+                "Tire bead is properly seated on rim",
+                "No cuts, chunking, or excessive wear on tire surface",
+            ],
+        },
+        {
+            "filename": "IMG_9914.jpg",
+            "component": "Jetson Xavier NX (Compute)",
+            "checklist_item": "2.1 Jetson Xavier NX (Compute)",
+            "grade": "Green",
+            "reason": "Jetson compute board is properly seated and secured. No loose cables, no thermal damage, cooling fan is present.",
+            "visual_indicators": [
+                "Board is mounted with all standoff screws",
+                "USB and GPIO connectors are firmly seated",
+                "No burn marks or bulging capacitors visible",
+            ],
+        },
+        {
+            "filename": "IMG_9915.jpg",
+            "component": "LiDAR Unit",
+            "checklist_item": "2.2 LiDAR Unit",
+            "grade": "Green",
+            "reason": "LiDAR sensor is properly mounted level on the chassis. Connector is secure. Rotating head is unobstructed.",
+            "visual_indicators": [
+                "LiDAR mounting bracket is tight with no play",
+                "USB or serial cable is connected and strain-relieved",
+                "No foreign objects blocking the scan path",
+            ],
+        },
+        {
+            "filename": "IMG_9916.jpg",
+            "component": "Power Distribution Board",
+            "checklist_item": "2.3 Power Distribution Board",
+            "grade": "Green",
+            "reason": "Power distribution board shows no signs of overheating or damage. All connectors are properly seated. Fuses are intact.",
+            "visual_indicators": [
+                "Board PCB traces show no burn or discoloration",
+                "XT60 and JST connectors are fully engaged",
+                "No loose wires or exposed solder joints",
+            ],
+        },
+        {
+            "filename": "IMG_9917.jpg",
+            "component": "Chassis Frame & Body",
+            "checklist_item": "1.1 Chassis Frame & Body",
+            "grade": "Green",
+            "reason": "Second angle confirms chassis integrity. All structural members and mounting points are undamaged.",
+            "visual_indicators": [
+                "Rear chassis section intact with no cracks",
+                "Motor mount screws are all present",
+                "Chassis is level with no visible twist",
+            ],
+        },
+        {
+            "filename": "IMG_9918.jpg",
+            "component": "Wheels & Tires",
+            "checklist_item": "1.2 Wheels & Tires",
+            "grade": "Green",
+            "reason": "Close-up confirms wheels are true and balanced. Tire compound is in good condition with even contact patch.",
+            "visual_indicators": [
+                "Rim is round with no dents or cracks",
+                "Tire shows even tread wear pattern",
+                "Wheel nut/hex is tight with no play",
+            ],
+        },
+        {
+            "filename": "IMG_9919.jpg",
+            "component": "Power Distribution Board",
+            "checklist_item": "2.3 Power Distribution Board",
+            "grade": "Green",
+            "reason": "Overall vehicle assembly view shows clean wiring harness. All components are mounted securely with no loose cables.",
+            "visual_indicators": [
+                "Wiring is routed away from moving parts",
+                "No exposed wire strands or tape repairs",
+                "All connectors appear secure and strain-relieved",
+            ],
+        },
+    ],
+}
+
+
+def build_f1tenth_training_text() -> str:
+    """Build a text-only few-shot block for F1Tenth green examples."""
+    lines = [
+        "\n=== F1TENTH TRAINING EXAMPLES (Labeled GREEN — these all PASS) ===\n",
+        "These are real inspection images of a passing F1Tenth RoboRacer. Use them to",
+        "understand what a GREEN (acceptable) F1Tenth component looks like.\n",
+    ]
+    for ex in F1TENTH_TRAINING_CATALOG["green"]:
+        lines.append(f"  Image: {ex['filename']}")
+        lines.append(f"  Component: {ex['component']} → Checklist: {ex['checklist_item']}")
+        lines.append(f"  Grade: GREEN — {ex['reason']}")
+        lines.append(f"  Key visual indicators: {'; '.join(ex['visual_indicators'])}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def load_f1tenth_training_images() -> list:
+    """
+    Load all F1Tenth green training images as base64.
+    Returns: [{ entry, image_b64 }, ...]
+    """
+    result = []
+    for entry in F1TENTH_TRAINING_CATALOG["green"]:
+        b64 = load_training_image_b64("F1Tenth", entry["filename"])
+        if b64:
+            result.append({"entry": entry, "image_b64": b64})
+    return result
+
+
+# ─────────────────────────────────────────────────────
+# AUDIO KEYWORD → REFERENCE IMAGE MATCHING
+# Maps spoken keywords to the F1Tenth reference images for that component
+# ─────────────────────────────────────────────────────
+
+COMPONENT_KEYWORD_MAP = {
+    # Chassis / frame / body
+    'chassis':      ['IMG_9912.jpg', 'IMG_9917.jpg'],
+    'frame':        ['IMG_9912.jpg', 'IMG_9917.jpg'],
+    'body':         ['IMG_9912.jpg', 'IMG_9917.jpg'],
+    'shell':        ['IMG_9912.jpg', 'IMG_9917.jpg'],
+    'mount':        ['IMG_9912.jpg', 'IMG_9917.jpg'],
+    # Wheels / tires
+    'wheel':        ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    'tire':         ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    'tyre':         ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    'rim':          ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    'axle':         ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    'tread':        ['IMG_9913.jpg', 'IMG_9918.jpg'],
+    # Jetson compute
+    'jetson':       ['IMG_9914.jpg'],
+    'compute':      ['IMG_9914.jpg'],
+    'nvidia':       ['IMG_9914.jpg'],
+    'xavier':       ['IMG_9914.jpg'],
+    'cpu':          ['IMG_9914.jpg'],
+    'gpu':          ['IMG_9914.jpg'],
+    'sbc':          ['IMG_9914.jpg'],
+    # LiDAR
+    'lidar':        ['IMG_9915.jpg'],
+    'lidar':        ['IMG_9915.jpg'],
+    'laser':        ['IMG_9915.jpg'],
+    'scan':         ['IMG_9915.jpg'],
+    'hokuyo':       ['IMG_9915.jpg'],
+    'rplidar':      ['IMG_9915.jpg'],
+    'sensor':       ['IMG_9915.jpg'],
+    # Power / VESC / distribution board
+    'power':        ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'vesc':         ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'battery':      ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'esc':          ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'board':        ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'distribution': ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'connector':    ['IMG_9916.jpg', 'IMG_9919.jpg'],
+    'wiring':       ['IMG_9916.jpg', 'IMG_9919.jpg'],
+}
+
+# Filename → catalog entry lookup (built at import time)
+_F1TENTH_FILENAME_LOOKUP = {
+    entry["filename"]: entry for entry in F1TENTH_TRAINING_CATALOG["green"]
+}
+
+
+def get_f1tenth_reference_entries_for_text(text: str) -> list:
+    """
+    Given any text (audio transcript + component name), return up to 2
+    F1Tenth training catalog entries whose reference images best match.
+
+    Keyword matching: first match wins per component group; max 2 images returned.
+    Falls back to empty list if nothing matches.
+    """
+    text_lower = text.lower()
+    matched_filenames = []
+    seen = set()
+
+    for keyword, filenames in COMPONENT_KEYWORD_MAP.items():
+        if keyword in text_lower:
+            for fn in filenames:
+                if fn not in seen:
+                    matched_filenames.append(fn)
+                    seen.add(fn)
+            if len(matched_filenames) >= 2:
+                break
+
+    result = []
+    for fn in matched_filenames[:2]:
+        entry = _F1TENTH_FILENAME_LOOKUP.get(fn)
+        if entry:
+            result.append(entry)
+    return result
+
+
+# Pre-build the F1Tenth training text block
+F1TENTH_TRAINING_EXAMPLES_TEXT = build_f1tenth_training_text()
 
 
 # ─────────────────────────────────────────────────────
@@ -268,7 +507,7 @@ def build_training_examples_text() -> str:
     return "\n".join(lines)
 
 
-def load_training_image_b64(subfolder: str, filename: str) -> str | None:
+def load_training_image_b64(subfolder: str, filename: str):
     """
     Load a training image as base64 string.
     subfolder: 'Red', 'Yellow', 'Failed Prompts', or '' for root

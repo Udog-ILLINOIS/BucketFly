@@ -1,7 +1,15 @@
 /**
- * CAT TA1 Wheel Loader daily inspection checklist.
+ * Machine inspection checklists.
  * Single source of truth — imported by ReportView, HistoryView, LiveFeedback.
+ *
+ * Supported machines:
+ *   'cat_ta1'  — CAT 982 Medium Wheel Loader (daily TA1 walkaround)
+ *   'f1tenth'  — F1Tenth RoboRacer autonomous car (pre-run inspection)
  */
+
+// ─────────────────────────────────────────────────────
+// CAT 982 WHEEL LOADER — TA1 DAILY INSPECTION
+// ─────────────────────────────────────────────────────
 
 export const CAT_TA1_CHECKLIST = {
   'FROM THE GROUND': [
@@ -52,13 +60,61 @@ export const CAT_TA1_CHECKLIST = {
   ],
 };
 
+// ─────────────────────────────────────────────────────
+// F1TENTH ROBORACER — PRE-RUN INSPECTION
+// ─────────────────────────────────────────────────────
+
+export const F1TENTH_CHECKLIST = {
+  'CHASSIS': [
+    '1.1 Chassis Frame & Body',
+    '1.2 Wheels & Tires',
+  ],
+  'COMPUTE & SENSORS': [
+    '2.1 Jetson Xavier NX (Compute)',
+    '2.2 LiDAR Unit',
+    '2.3 Power Distribution Board',
+  ],
+};
+
+// ─────────────────────────────────────────────────────
+// MACHINE REGISTRY
+// ─────────────────────────────────────────────────────
+
+export const MACHINE_CHECKLISTS = {
+  cat_ta1: CAT_TA1_CHECKLIST,
+  f1tenth: F1TENTH_CHECKLIST,
+};
+
+export const MACHINE_LABELS = {
+  cat_ta1: 'CAT 982 Wheel Loader',
+  f1tenth: 'F1Tenth RoboRacer',
+};
+
+export function getMachineChecklist(machineType) {
+  return MACHINE_CHECKLISTS[machineType] || CAT_TA1_CHECKLIST;
+}
+
+export function getMachineChecklistTotal(machineType) {
+  return Object.values(getMachineChecklist(machineType)).flat().length;
+}
+
 /** Flat array of all 38 checklist item names. */
 export const ALL_CHECKLIST_ITEMS = Object.values(CAT_TA1_CHECKLIST).flat();
 
 /** Set for O(1) membership checks. */
 export const VALID_ITEMS = new Set(ALL_CHECKLIST_ITEMS);
 
-/** Total number of checklist items. */
+/** Return the flat items array for a given machine type. */
+export function getAllMachineItems(machineType) {
+  return Object.values(getMachineChecklist(machineType)).flat();
+}
+
+/** Return a Set of valid item names for a given machine type. */
+export function getValidItemsSet(machineType) {
+  return new Set(getAllMachineItems(machineType));
+}
+
+/** Total number of CAT TA1 checklist items (legacy constant). */
 export const CHECKLIST_TOTAL = ALL_CHECKLIST_ITEMS.length;
 
 /** Grade → display color. */
@@ -96,13 +152,15 @@ export function worstGrade(checklistState) {
   return 'None';
 }
 
-/** Count grades in a checklistState object → { Red, Yellow, Green, None }. */
-export function countGrades(checklistState) {
+/** Count grades in a checklistState object → { Red, Yellow, Green, None }.
+ *  Pass total (from getMachineChecklistTotal) to get the correct "None" count.
+ */
+export function countGrades(checklistState, total = CHECKLIST_TOTAL) {
   const values = Object.values(checklistState);
   return {
     Red: values.filter(v => v === 'Red').length,
     Yellow: values.filter(v => v === 'Yellow').length,
     Green: values.filter(v => v === 'Green').length,
-    None: CHECKLIST_TOTAL - Object.keys(checklistState).length,
+    None: total - Object.keys(checklistState).length,
   };
 }

@@ -11,9 +11,10 @@ async function apiFetch(url, options = {}) {
 }
 
 /** Upload inspection frames + audio for full analysis. */
-export async function uploadInspection(frames, audioBlob) {
+export async function uploadInspection(frames, audioBlob, machineType = 'cat_ta1') {
   const fd = new FormData();
   fd.append('frames', JSON.stringify(frames));
+  fd.append('machine_type', machineType);
   if (audioBlob?.size > 0) fd.append('audio', audioBlob, 'audio.webm');
   return apiFetch(`${API_BASE}/api/analyze`, { method: 'POST', body: fd });
 }
@@ -37,11 +38,11 @@ export async function fetchHistory(component) {
 }
 
 /** Send a single frame for real-time component identification during recording. */
-export async function identifyFrame(frame, checklistState = {}) {
+export async function identifyFrame(frame, checklistState = {}, machineType = 'cat_ta1') {
   return apiFetch(`${API_BASE}/api/identify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ frame, checklist_state: checklistState }),
+    body: JSON.stringify({ frame, checklist_state: checklistState, machine_type: machineType }),
   });
 }
 
@@ -75,6 +76,14 @@ export async function saveInspection(inspectionId, itemsEvaluated, audioTranscri
       audio_transcript: audioTranscript,
     }),
   });
+}
+
+/** Upload a video file for full pipeline analysis (audio transcription → timestamp seeks → AI). */
+export async function uploadVideoInspection(videoFile, machineType = 'cat_ta1') {
+  const fd = new FormData();
+  fd.append('video', videoFile);
+  fd.append('machine_type', machineType);
+  return apiFetch(`${API_BASE}/api/analyze-video`, { method: 'POST', body: fd });
 }
 
 /** Upload a single image + text description for AI inspection. */

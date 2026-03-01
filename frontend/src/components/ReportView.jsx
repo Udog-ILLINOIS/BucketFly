@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { CAT_TA1_CHECKLIST, GRADE_COLORS, GRADE_LABELS, countGrades, worstGrade } from '../constants/checklist';
+import { GRADE_COLORS, GRADE_LABELS, countGrades, worstGrade, getMachineChecklist, getMachineChecklistTotal } from '../constants/checklist';
 import './ReportView.css';
 
 /** Build a summary comment from all inspected items. */
@@ -19,12 +19,19 @@ function buildGeneralComment(checklistState, checklistReasoningState) {
   return parts.join(' ');
 }
 
-export function ReportView({ result, checklistState, checklistReasoningState = {}, onInjectMock, mockList = [] }) {
+const HISTORY_SHADOW = {
+  Red:    '0 0 0 3px rgba(239, 68, 68, 0.55)',
+  Yellow: '0 0 0 3px rgba(245, 158, 11, 0.55)',
+};
+
+export function ReportView({ result, machineType = 'cat_ta1', checklistState, checklistReasoningState = {}, historyAlertState = {}, onInjectMock, mockList = [] }) {
   const [expandedItem, setExpandedItem] = useState(null);
   const [selectedMock, setSelectedMock] = useState(0);
 
+  const checklist = getMachineChecklist(machineType);
+  const checklistTotal = getMachineChecklistTotal(machineType);
   const generalGrade = Object.keys(checklistState).length > 0 ? worstGrade(checklistState) : 'None';
-  const counts = countGrades(checklistState);
+  const counts = countGrades(checklistState, checklistTotal);
   const generalComment = buildGeneralComment(checklistState, checklistReasoningState);
 
   return (
@@ -50,10 +57,23 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
       {/* Header */}
       <div className="pdf-header">
         <div className="pdf-title-block">
-          <h1>Wheel Loader: Safety & Maintenance</h1>
-          <p className="pdf-subtitle">Daily</p>
+          {machineType === 'f1tenth' ? (
+            <>
+              <h1>F1Tenth RoboRacer: Pre-Run Inspection</h1>
+              <p className="pdf-subtitle">Pre-Run Safety Check</p>
+            </>
+          ) : (
+            <>
+              <h1>Wheel Loader: Safety & Maintenance</h1>
+              <p className="pdf-subtitle">Daily</p>
+            </>
+          )}
         </div>
-        <div className="pdf-logos"><div className="logo-cat">CAT</div></div>
+        <div className="pdf-logos">
+          {machineType === 'f1tenth'
+            ? <div className="logo-f1tenth">F1<span>10</span>TH</div>
+            : <div className="logo-cat">CAT</div>}
+        </div>
         <div className="pdf-summary-dots">
           <div className="summary-dot"><span className="dot red"></span>{counts.Red}</div>
           <div className="summary-dot"><span className="dot yellow"></span>{counts.Yellow}</div>
@@ -63,7 +83,7 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
       </div>
 
       {/* Meta Info */}
-      <MetaGrid />
+      <MetaGrid machineType={machineType} />
 
       {/* General Info */}
       <div className="pdf-section-header">General Info & Comments</div>
@@ -79,20 +99,21 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
       </div>
 
       {/* Checklist */}
-      {Object.entries(CAT_TA1_CHECKLIST).map(([category, items]) => (
+      {Object.entries(checklist).map(([category, items]) => (
         <div key={category} className="pdf-category-block">
           <div className="pdf-section-header">{category}</div>
           {items.map(item => {
             const grade = checklistState[item] || 'None';
             const reasoning = checklistReasoningState[item];
             const isExpanded = expandedItem === item;
-            const isLatest = result?.cross_reference?.items_evaluated?.some(e => e.checklist_mapped_item === item);
+            const isInspected = grade !== 'None';
+            const histAlert = !isInspected ? historyAlertState[item] : null;
 
             return (
-              <div key={item} className={`pdf-list-item ${isLatest ? 'highlight' : ''} clickable-item`}>
+              <div key={item} className={`pdf-list-item ${isInspected ? 'highlight' : ''} clickable-item`}>
                 <div className="item-main" onClick={() => setExpandedItem(prev => prev === item ? null : item)}>
                   <span className="item-chevron">{isExpanded ? '\u25be' : '\u25b8'}</span>
-                  <span className="item-dot" style={{ backgroundColor: GRADE_COLORS[grade] }}></span>
+                  <span className="item-dot" style={{ backgroundColor: GRADE_COLORS[grade], boxShadow: histAlert ? HISTORY_SHADOW[histAlert] : undefined }}></span>
                   <span className="item-text">{item}</span>
                   <span className="item-status">{GRADE_LABELS[grade]}</span>
                 </div>
@@ -139,16 +160,25 @@ export function ReportView({ result, checklistState, checklistReasoningState = {
 
 // -- Sub-components --
 
-function MetaGrid() {
-  const fields = [
-    ['Inspection Number', '22892110'],  ['Customer No', '2969507567'],
-    ['Serial Number', 'W8210127'],      ['Customer Name', 'BORAL RESOURCES P/L'],
-    ['Make', 'CATERPILLAR'],            ['Work Order', 'FW12076'],
-    ['Model', '982'],                   ['Completed On', new Date().toLocaleString()],
-    ['Equipment Family', 'Medium Wheel Loader'], ['Inspector', 'AI VISION AGENT'],
-    ['Asset ID', 'FL-3062'],            ['PDF Generated On', new Date().toLocaleDateString()],
-    ['SMU', '1027 Hours'],              ['Location', '601 Richland St, East Peoria, IL 61611'],
-  ];
+function MetaGrid({ machineType }) {
+  const fields = machineType === 'f1tenth'
+    ? [
+        ['Vehicle', 'F1Tenth RoboRacer'],     ['Platform', 'Traxxas Slash 4x4'],
+        ['Compute', 'Jetson Xavier NX'],       ['Firmware', 'ROS2 Humble'],
+        ['LiDAR', 'Hokuyo 10LX'],             ['Motor Controller', 'VESC'],
+        ['Battery', '3S LiPo 11.1V'],         ['Inspector', 'AI VISION AGENT'],
+        ['Inspection Type', 'Pre-Run Check'], ['Completed On', new Date().toLocaleString()],
+        ['Location', 'University of Illinois, Urbana-Champaign'], ['PDF Generated On', new Date().toLocaleDateString()],
+      ]
+    : [
+        ['Inspection Number', '22892110'],  ['Customer No', '2969507567'],
+        ['Serial Number', 'W8210127'],      ['Customer Name', 'BORAL RESOURCES P/L'],
+        ['Make', 'CATERPILLAR'],            ['Work Order', 'FW12076'],
+        ['Model', '982'],                   ['Completed On', new Date().toLocaleString()],
+        ['Equipment Family', 'Medium Wheel Loader'], ['Inspector', 'AI VISION AGENT'],
+        ['Asset ID', 'FL-3062'],            ['PDF Generated On', new Date().toLocaleDateString()],
+        ['SMU', '1027 Hours'],              ['Location', '601 Richland St, East Peoria, IL 61611'],
+      ];
   return (
     <div className="pdf-meta-grid">
       {fields.map(([label, value]) => (

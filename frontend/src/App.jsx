@@ -1,17 +1,19 @@
-﻿import { useState, useRef } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { CaptureZone } from './components/CaptureZone';
 import { ReportView } from './components/ReportView';
 import { HistoryView } from './components/HistoryView';
 import { UploadInspect } from './components/UploadInspect';
 import { AlertDropdown } from './components/AlertDropdown';
-import { uploadInspection, sendClarification, saveInspection, uploadImageInspection, fetchHistoryByDate } from './services/api';
-import { MOCK_RESULTS } from './constants/mockData';
+import { uploadInspection, sendClarification, saveInspection, uploadImageInspection, uploadVideoInspection, fetchHistoryByDate, fetchHistoryDates } from './services/api';
+import { MOCK_RESULTS, MOCK_RESULTS_F1TENTH } from './constants/mockData';
+import { getMachineChecklistTotal, MACHINE_LABELS } from './constants/checklist';
 import './App.css';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function App() {
   const [activeTab, setActiveTab] = useState('record');
+  const [machineType, setMachineType] = useState('cat_ta1');
   const [lastResult, setLastResult] = useState(null);
   const [checklistState, setChecklistState] = useState({});
   const [checklistReasoningState, setChecklistReasoningState] = useState({});
@@ -19,7 +21,35 @@ function App() {
   const [injectedRecords, setInjectedRecords] = useState([]);
   const [isClarifying, setIsClarifying] = useState(false);
   const [workingDate, setWorkingDate] = useState(todayStr());
+  const [historyAlertState, setHistoryAlertState] = useState({});
   const pendingInspectionId = useRef(null);
+
+  // Load most recent historical grades so the report can flag uninspected items
+  useEffect(() => {
+    const today = todayStr();
+    fetchHistoryDates()
+      .then(data => {
+        const pastDates = (data.dates || []).filter(d => d !== today);
+        if (pastDates.length === 0) return;
+        // Fetch the most recent past date
+        return fetchHistoryByDate(pastDates[0]);
+      })
+      .then(data => {
+        if (!data) return;
+        const alerts = {};
+        (data.records || []).forEach(rec => {
+          const item = rec.ai_analysis?.checklist_mapped_item || rec.component;
+          const grade = rec.ai_analysis?.checklist_grade || rec.grade;
+          if (!item || !grade || grade === 'None' || grade === 'Green') return;
+          // Keep the worst grade if the item appears more than once
+          if (grade === 'Red' || alerts[item] !== 'Red') {
+            alerts[item] = grade;
+          }
+        });
+        setHistoryAlertState(alerts);
+      })
+      .catch(() => {});
+  }, []);
 
   // -- Result Processing --
 
@@ -103,7 +133,7 @@ function App() {
   const handleInspectionComplete = async (frames, audioBlob) => {
     console.log(`Uploading ${frames.length} frames...`);
     try {
-      const result = await uploadInspection(frames, audioBlob);
+      const result = await uploadInspection(frames, audioBlob, machineType);
       console.log('Upload result:', result);
 
       if (result.inspection_id) pendingInspectionId.current = result.inspection_id;
@@ -140,8 +170,21 @@ function App() {
     }
   };
 
+  const activeMockList = machineType === 'f1tenth' ? MOCK_RESULTS_F1TENTH : MOCK_RESULTS;
+
+  const handleMachineChange = (newType) => {
+    setMachineType(newType);
+    // Reset inspection state when switching machines
+    setChecklistState({});
+    setChecklistReasoningState({});
+    setLastResult(null);
+    setInjectedRecords([]);
+    setNotification(null);
+    setIsClarifying(false);
+  };
+
   const handleInjectMock = async (index) => {
-    const mock = MOCK_RESULTS[index];
+    const mock = activeMockList[index];
     if (!mock) return;
     handleUpdateResult(mock);
     setActiveTab('report');
@@ -206,6 +249,8 @@ function App() {
 
   // -- Render --
 
+  const checklistTotal = getMachineChecklistTotal(machineType);
+
   return (
     <div className="app">
       <AlertDropdown
@@ -214,11 +259,24 @@ function App() {
         onDismiss={() => setNotification(null)}
       />
 
+      <div className="machine-selector-bar">
+        {Object.entries(MACHINE_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            className={`machine-selector-btn ${machineType === key ? 'active' : ''}`}
+            onClick={() => handleMachineChange(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="tab-content">
         {activeTab === 'record' && (
           <CaptureZone
             onInspectionComplete={isClarifying ? handleClarificationComplete : handleInspectionComplete}
             checklistState={checklistState}
+            machineType={machineType}
             onRecordingStart={() => {}}
             onItemIdentified={(item) => {
               setChecklistState(prev => ({ ...prev, [item]: prev[item] || 'Green' }));
@@ -228,16 +286,19 @@ function App() {
         {activeTab === 'report' && (
           <ReportView
             result={lastResult}
+            machineType={machineType}
             checklistState={checklistState}
             checklistReasoningState={checklistReasoningState}
+            historyAlertState={historyAlertState}
             onInjectMock={handleInjectMock}
-            mockList={MOCK_RESULTS}
+            mockList={activeMockList}
           />
         )}
         {activeTab === 'history' && (
           <HistoryView
             injectedRecords={injectedRecords}
             workingDate={workingDate}
+            machineType={machineType}
             onClearInjected={async (newDate) => {
               // Clear live state
               setInjectedRecords([]);
@@ -275,8 +336,14 @@ function App() {
         )}
         {activeTab === 'upload' && (
           <UploadInspect
-            onResult={async (imageDataUrl, description) => {
+            onImageResult={async (imageDataUrl, description) => {
               const result = await uploadImageInspection(imageDataUrl, description);
+              handleUpdateResult(result);
+              setTimeout(() => setActiveTab('report'), 1500);
+              return result;
+            }}
+            onVideoResult={async (videoFile) => {
+              const result = await uploadVideoInspection(videoFile, machineType);
               handleUpdateResult(result);
               setTimeout(() => setActiveTab('report'), 1500);
               return result;
@@ -296,7 +363,7 @@ function App() {
           <span className="tab-icon">📋</span>
           <span className="tab-label">Report</span>
           {Object.keys(checklistState).length > 0 && (
-            <span className="tab-badge">{Object.keys(checklistState).length}/38</span>
+            <span className="tab-badge">{Object.keys(checklistState).length}/{checklistTotal}</span>
           )}
         </button>
         <button className={`tab-item ${activeTab === 'history' ? 'active' : ''}`}

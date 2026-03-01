@@ -1,8 +1,9 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { fetchHistoryDates, fetchHistoryByDate, clearHistoryByDate } from '../services/api';
 import {
-  CAT_TA1_CHECKLIST, GRADE_COLORS, GRADE_LABELS,
-  normalizeGrade, countGrades, VALID_ITEMS, CHECKLIST_TOTAL,
+  GRADE_COLORS, GRADE_LABELS,
+  normalizeGrade, countGrades,
+  getMachineChecklist, getMachineChecklistTotal, getValidItemsSet,
 } from '../constants/checklist';
 import '../components/ReportView.css';
 import './HistoryView.css';
@@ -15,7 +16,7 @@ function formatTime(id) {
   return t.length >= 6 ? `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}` : '';
 }
 
-export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, workingDate }) {
+export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, workingDate, machineType = 'cat_ta1' }) {
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(workingDate || today());
   const [records, setRecords] = useState([]);
@@ -86,10 +87,11 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       .then(data => {
         const dates = data.dates || [];
         setAvailableDates(dates);
-        if (dates.length > 0 && !dates.includes(today())) setSelectedDate(dates[0]);
+        // Stay on workingDate — only fall back to most recent if workingDate is not set
+        if (!workingDate && dates.length > 0) setSelectedDate(dates[0]);
       })
       .catch(() => {});
-  }, []);
+  }, [workingDate]);
 
   /* Load records when date changes */
   const loadRecords = useCallback(async (date, signal) => {
@@ -118,19 +120,22 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
   const checklistState = {};
   const itemRecords = {};
 
+  const validItems = getValidItemsSet(machineType);
+  const machineChecklist = getMachineChecklist(machineType);
+  const machineTotal = getMachineChecklistTotal(machineType);
+
   allRecords.forEach(rec => {
     const item = rec.ai_analysis?.checklist_mapped_item || rec.component;
     const grade = normalizeGrade(rec.ai_analysis?.checklist_grade || rec.grade);
-    if (item && grade !== 'None' && VALID_ITEMS.has(item)) {
+    if (item && grade !== 'None' && validItems.has(item)) {
       checklistState[item] = grade;
       itemRecords[item] = rec;
     }
   });
 
-  const counts = countGrades(checklistState);
-  const allDates = availableDates.includes(selectedDate)
-    ? availableDates
-    : [selectedDate, ...availableDates];
+  const counts = countGrades(checklistState, machineTotal);
+  const allDatesSet = new Set([selectedDate, ...availableDates]);
+  const allDates = [...allDatesSet].sort().reverse(); // newest first
 
   return (
     <div className="pdf-container">
@@ -162,10 +167,15 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       {/* Header */}
       <div className="pdf-header">
         <div className="pdf-title-block">
-          <h1>Wheel Loader: Safety & Maintenance</h1>
-          <p className="pdf-subtitle">Daily \u2014 {selectedDate}</p>
+          <h1>{machineType === 'f1tenth' ? 'F1Tenth RoboRacer: Pre-Run Inspection' : 'Wheel Loader: Safety & Maintenance'}</h1>
+          <p className="pdf-subtitle">Daily &mdash; {selectedDate}</p>
         </div>
-        <div className="pdf-logos"><div className="logo-cat">CAT</div></div>
+        <div className="pdf-logos">
+          {machineType === 'f1tenth'
+            ? <div className="logo-f1tenth">F1</div>
+            : <div className="logo-cat">CAT</div>
+          }
+        </div>
         <div className="pdf-summary-dots">
           <div className="summary-dot"><span className="dot red"></span>{counts.Red}</div>
           <div className="summary-dot"><span className="dot yellow"></span>{counts.Yellow}</div>
@@ -175,7 +185,7 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       </div>
 
       {/* Meta */}
-      <HistoryMeta selectedDate={selectedDate} totalRecords={allRecords.length} />
+      <HistoryMeta selectedDate={selectedDate} totalRecords={allRecords.length} machineType={machineType} />
 
       {/* States: loading / error / empty */}
       {isLoading && allRecords.length === 0 && <div className="pdf-section-header">Loading...</div>}
@@ -203,9 +213,9 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
       {/* Populated state */}
       {allRecords.length > 0 && (
         <>
-          <GeneralInfoRow counts={counts} selectedDate={selectedDate} totalRecords={allRecords.length} />
+          <GeneralInfoRow counts={counts} selectedDate={selectedDate} totalRecords={allRecords.length} machineType={machineType} />
 
-          {Object.entries(CAT_TA1_CHECKLIST).map(([category, items]) => (
+          {Object.entries(machineChecklist).map(([category, items]) => (
             <div key={category} className="pdf-category-block">
               <div className="pdf-section-header">{category}</div>
               {items.map(item => {
@@ -236,15 +246,24 @@ export function HistoryView({ injectedRecords = [], onClearInjected, onNewDay, w
 
 /* ---- Sub-components ---- */
 
-function HistoryMeta({ selectedDate, totalRecords }) {
-  const fields = [
-    ['Inspection Date', selectedDate], ['Customer No', '2969507567'],
-    ['Serial Number', 'W8210127'],     ['Customer Name', 'BORAL RESOURCES P/L'],
-    ['Make', 'CATERPILLAR'],           ['Work Order', 'FW12076'],
-    ['Model', '982'],                  ['Total Inspections', totalRecords],
-    ['Equipment Family', 'Medium Wheel Loader'], ['Inspector', 'AI VISION AGENT'],
-    ['Asset ID', 'FL-3062'],           ['Report Generated', new Date().toLocaleDateString()],
-  ];
+function HistoryMeta({ selectedDate, totalRecords, machineType }) {
+  const fields = machineType === 'f1tenth'
+    ? [
+        ['Inspection Date', selectedDate], ['Team', 'HackAstra'],
+        ['Serial Number', 'F1T-2026-001'], ['Platform', 'F1Tenth RoboRacer'],
+        ['Make', 'NVIDIA / VESC'],         ['Checklist', 'Pre-Run'],
+        ['Model', 'Jetson Xavier NX'],     ['Total Inspections', totalRecords],
+        ['Equipment Family', 'Autonomous RC Car'], ['Inspector', 'AI VISION AGENT'],
+        ['Asset ID', 'F1T-001'],           ['Report Generated', new Date().toLocaleDateString()],
+      ]
+    : [
+        ['Inspection Date', selectedDate], ['Customer No', '2969507567'],
+        ['Serial Number', 'W8210127'],     ['Customer Name', 'BORAL RESOURCES P/L'],
+        ['Make', 'CATERPILLAR'],           ['Work Order', 'FW12076'],
+        ['Model', '982'],                  ['Total Inspections', totalRecords],
+        ['Equipment Family', 'Medium Wheel Loader'], ['Inspector', 'AI VISION AGENT'],
+        ['Asset ID', 'FL-3062'],           ['Report Generated', new Date().toLocaleDateString()],
+      ];
   return (
     <div className="pdf-meta-grid">
       {fields.map(([label, value]) => (
