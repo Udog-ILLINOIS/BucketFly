@@ -607,10 +607,14 @@ CROSSREF_PROMPT = f"""You are a senior Caterpillar TA1 inspection verifier.
 
 You have been provided:
 1. A visual AI analysis of equipment frames (what the AI SEES)
-2. The operator's spoken assessment (what the operator SAID)
+2. The operator's spoken assessment (what the operator SAID) — including a list of components they mentioned
 3. Historical inspection logs (past grade and condition)
 
-Your job is to cross-reference these three sources, map the inspected component to the official Caterpillar TA1 checklist, compare current wear to history, and produce a final graded verdict.
+Your job is to produce one graded verdict entry for EVERY component that was either:
+  (a) identified visually in the frames, OR
+  (b) mentioned by the operator in the audio transcript
+
+This is a walkaround inspection — multiple components may be visible or discussed. Do NOT restrict to just one component. Evaluate ALL components that appear in either source.
 
 [OFFICIAL CATERPILLAR TA1 CHECKLIST]
 1.1 Tires and Rims
@@ -652,28 +656,32 @@ Your job is to cross-reference these three sources, map the inspected component 
 4.8 Switch functionality
 4.9 Overall Cab Interior
 
-STEP 1 — MAP & GRADE:
-  - Identify which exact item from the checklist above is being inspected. Output it exactly as written.
-  - Grade using the COLOR-CODE system:
+Use these checklist item names EXACTLY (including the number prefix) in checklist_mapped_item.
+
+STEP 1 — COLLECT ALL COMPONENTS:
+  List every component that appears in the visual analysis OR in components_mentioned from the audio.
+  For each one, note: what the AI saw (if anything) AND what the operator said (if anything).
+
+STEP 2 — GRADE EACH COMPONENT INDEPENDENTLY:
+  For each component from Step 1, map it to the exact checklist item name above and grade it:
     Green = Component is acceptable, machine can operate normally
     Yellow = Component needs scheduled repair, but machine can operate today
     Red = Component has critical failure, machine MUST NOT operate
-    Fail = Insufficient data/image quality to make a determination
-
-STEP 2 — COMPARE: What did the operator say vs what the AI sees vs History?
-  - For each item, do they agree or disagree?
-  - Does new visual show accelerated wear vs historical baseline?
+    None = Component mentioned but no clear evidence to grade it
+  - If clear visual evidence exists → use visual grade, cross-check with audio
+  - If only audio evidence exists → use operator's spoken assessment as primary grade source
+  - If audio and visual DISAGREE → trust the more severe assessment; flag CLARIFY if critical
   - REMEMBER: Dirt, dust, paint wear, surface rust, and minor cosmetic damage are NORMAL and GREEN.
+  - Does new visual show accelerated wear vs historical baseline?
 
-STEP 3 — RESOLVE & STATUS:
-  - AGREE + Green -> PASS
-  - AGREE + Yellow -> MONITOR
-  - AGREE + Red -> FAIL
-  - Image quality too poor to assess -> INSUFFICIENT_DATA
-  - DISAGREE (AI sees worse) -> Trust the AI, escalate grade, return CLARIFY with a specific question
-  - AMBIGUOUS -> CLARIFY with a specific yes/no question
-
-Focus ONLY on the components present in the current clip. Evaluate every visible component independently."""
+STEP 3 — RESOLVE OVERALL STATUS:
+  - Any Red item → overall FAIL
+  - Any CLARIFY item → overall CLARIFY
+  - Any Yellow item (no Red) → overall MONITOR
+  - All Green → overall PASS
+  - Image quality too poor to assess → INSUFFICIENT_DATA
+  - DISAGREE (AI sees worse) → Trust the AI, escalate grade, return CLARIFY with a specific question
+  - AMBIGUOUS → CLARIFY with a specific yes/no question"""
 
 F1TENTH_VISUAL_ANALYSIS_PROMPT = """You are a robotics technician performing a pre-run safety inspection on an F1Tenth RoboRacer autonomous racing car.
 

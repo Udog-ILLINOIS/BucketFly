@@ -124,6 +124,42 @@ def normalize_items_evaluated(cross_ref: dict, machine_type: str) -> dict:
     return cross_ref
 
 
+def backfill_visual_component(cross_ref: dict, visual_analysis: dict, machine_type: str) -> dict:
+    """
+    If the primary component identified by visual analysis was not mapped into
+    items_evaluated by the cross-reference step, inject it now.
+
+    This handles cases where the AI's general commentary identifies a component
+    but the cross-reference only outputs other items in items_evaluated.
+    """
+    component = visual_analysis.get('component', '').strip()
+    color_code = visual_analysis.get('color_code', '')
+    if not component or color_code not in ('Green', 'Yellow', 'Red'):
+        return cross_ref
+
+    canonical = normalize_checklist_item(component, machine_type)
+    valid_items = _F1TENTH_ITEMS if machine_type == 'f1tenth' else _CAT_ITEMS
+    if canonical not in valid_items:
+        return cross_ref  # couldn't map to a known item — skip
+
+    existing = {item.get('checklist_mapped_item', '') for item in cross_ref.get('items_evaluated', [])}
+    if canonical in existing:
+        return cross_ref  # already present — nothing to do
+
+    observations = ', '.join(visual_analysis.get('condition_observations', []))
+    conclusion = visual_analysis.get('chain_of_thought', {}).get('conclusion', '')
+    reasoning = observations or conclusion or 'Identified by visual analysis.'
+
+    cross_ref.setdefault('items_evaluated', []).append({
+        'checklist_mapped_item': canonical,
+        'checklist_grade': color_code,
+        'verdict_reasoning': reasoning,
+        'recommendation': '',
+    })
+    print(f"[BACKFILL] Added missing visual component '{canonical}' ({color_code}) to items_evaluated")
+    return cross_ref
+
+
 # Lazy-initialize services
 _gemini_service = None
 
@@ -228,6 +264,7 @@ def analyze():
 
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history, machine_type=machine_type)
             normalize_items_evaluated(cross_ref, machine_type)
+            backfill_visual_component(cross_ref, visual, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
@@ -639,6 +676,7 @@ def analyze_video():
                 visual, audio_transcription, frames, history, machine_type=machine_type
             )
             normalize_items_evaluated(cross_ref, machine_type)
+            backfill_visual_component(cross_ref, visual, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get(
                 "final_status", visual.get("preliminary_status", "UNCLEAR")
@@ -762,6 +800,7 @@ def analyze_upload():
 
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
             normalize_items_evaluated(cross_ref, machine_type)
+            backfill_visual_component(cross_ref, visual, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
