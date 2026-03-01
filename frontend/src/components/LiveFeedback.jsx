@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { ALL_CHECKLIST_ITEMS, CHECKLIST_TOTAL } from '../constants/checklist';
 import './LiveFeedback.css';
 
 /**
@@ -98,28 +99,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
 
     const isNone = !checklistItem || checklistItem === 'None';
 
-    // Compute missed items list (items not yet in checklistState)
-    const allItems = [
-        "1.1 Tires and Rims", "1.2 Bucket Cutting Edge, Tips, or Moldboard",
-        "1.3 Bucket Tilt Cylinders and Hoses", "1.4 Bucket, Lift Cylinders and Hoses",
-        "1.5 Lift arm attachment to frame", "1.6 Underneath of Machine",
-        "1.7 Transmission and Transfer Gears", "1.8 Differential and Final Drive Oil",
-        "1.9 Steps and Handrails", "1.10 Brake Air Tank; inspect",
-        "1.11 Fuel Tank", "1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals",
-        "1.13 Hydraulic fluid tank, inspect", "1.14 Transmission Oil",
-        "1.15 Work Lights", "1.16 Battery & Cables",
-        "2.1 Engine Oil Level", "2.2 Engine Coolant Level",
-        "2.3 Check Radiator Cores for Debris", "2.4 Inspect Hoses for Cracks or Leaks",
-        "2.5 Primary/secondary fuel filters", "2.6 All Belts",
-        "2.7 Air Cleaner and Air Filter Service Indicator", "2.8 Overall Engine Compartment",
-        "3.1 Steps & Handrails", "3.2 ROPS/FOPS", "3.3 Fire Extinguisher",
-        "3.4 Windshield wipers and washers", "3.5 Side Doors",
-        "4.1 Seat", "4.2 Seat belt and mounting", "4.3 Horn", "4.4 Backup Alarm",
-        "4.5 Windows and Mirrors", "4.6 Cab Air Filter", "4.7 Indicators & Gauges",
-        "4.8 Switch functionality", "4.9 Overall Cab Interior"
-    ];
     const inspectedCount = Object.keys(checklistState).length;
-    // Show items that have been inspected (exist in checklistState)
     const inspectedItems = Object.keys(checklistState);
 
     const confidenceClass = (confidenceLabel || 'LOW').toLowerCase();
@@ -168,7 +148,7 @@ export function LiveFeedback({ identification, checklistState, isActive }) {
             {/* Bottom: Inspected items ticker */}
             <div className="lf-bottom-bar">
                 <div className="lf-progress-summary">
-                    <span className="lf-progress-count">{inspectedCount}/{allItems.length}</span>
+                    <span className="lf-progress-count">{inspectedCount}/{CHECKLIST_TOTAL}</span>
                     <span className="lf-progress-label">inspected</span>
                 </div>
                 {inspectedItems.length > 0 && (

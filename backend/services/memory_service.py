@@ -267,5 +267,45 @@ class MemoryService:
             return []
 
 
+    def delete_by_date(
+        self,
+        date_str: str,
+        machine_id: str = DEFAULT_MACHINE_ID,
+    ) -> int:
+        """
+        Delete all inspection records for the given date (YYYY-MM-DD).
+        Returns the number of documents deleted.
+        """
+        if not self.client:
+            print(f"[MEMORY] Skipping delete (no API key) for date {date_str}")
+            return 0
+
+        try:
+            # List all docs for this machine filtered by date
+            response = self.client.documents.list(
+                container_tags=[self._machine_tag(machine_id)],
+                limit=200,
+                filters={
+                    "AND": [
+                        {"key": "inspection_date", "value": date_str, "operator": "eq"}
+                    ]
+                },
+            )
+            docs = getattr(response, 'memories', None) or getattr(response, 'results', [])
+            ids = [d.id for d in docs if d.id]
+
+            if not ids:
+                print(f"[MEMORY] No documents to delete for {date_str}")
+                return 0
+
+            self.client.documents.delete_bulk(ids=ids)
+            print(f"[MEMORY] Deleted {len(ids)} documents for {date_str}")
+            return len(ids)
+
+        except Exception as e:
+            print(f"[ERROR] Supermemory delete by date failed for {date_str}: {e}")
+            return 0
+
+
 # Singleton instance
 memory = MemoryService()

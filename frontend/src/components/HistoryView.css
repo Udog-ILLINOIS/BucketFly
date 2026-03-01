@@ -10,6 +10,27 @@
     flex: 1;
 }
 
+.clear-day-btn {
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+}
+.clear-day-btn:hover:not(:disabled) {
+    background: #ef4444;
+    color: #fff;
+}
+.clear-day-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .history-view {
     display: flex;
     flex-direction: column;

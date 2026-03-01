@@ -188,6 +188,58 @@ def analyze():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/save-inspection', methods=['POST'])
+def save_inspection():
+    """
+    Persist inspection items to Supermemory without running the AI pipeline.
+    Used by the frontend when injecting mock / local results.
+
+    Expects JSON:
+      { inspection_id, items_evaluated: [{checklist_mapped_item, checklist_grade,
+        verdict_reasoning, recommendation, confidence}],
+        audio_transcript?, machine_id? }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON body"}), 400
+
+        inspection_id = data.get('inspection_id', datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+        items = data.get('items_evaluated', [])
+        transcript = data.get('audio_transcript', '')
+        machine_id = data.get('machine_id', 'W8210127')
+
+        if not items:
+            return jsonify({"error": "No items_evaluated provided"}), 400
+
+        saved = 0
+        for idx, item in enumerate(items):
+            component = item.get('checklist_mapped_item', 'Unknown')
+            grade = item.get('checklist_grade', 'None')
+            notes = item.get('verdict_reasoning', '')
+            component_id = f"{inspection_id}_{idx}"
+
+            ok = memory.save_inspection(
+                inspection_id=component_id,
+                component=component,
+                grade=grade,
+                notes=notes,
+                raw_analysis=item,
+                audio_transcript=transcript,
+                frames=[],
+                machine_id=machine_id,
+            )
+            if ok:
+                saved += 1
+
+        print(f"[SAVE] {saved}/{len(items)} items persisted to Supermemory for {inspection_id}")
+        return jsonify({"saved": saved, "total": len(items), "inspection_id": inspection_id}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Save inspection failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/clarify', methods=['POST'])
 def clarify():
     """
@@ -309,6 +361,29 @@ def get_component_history():
     except Exception as e:
         print(f"[ERROR] History fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history/clear', methods=['POST'])
+def clear_history():
+    """
+    Delete all inspection records for a given date from Supermemory.
+    Expects JSON: { date: "YYYY-MM-DD", machine_id? }
+    """
+    try:
+        data = request.get_json()
+        if not data or not data.get('date'):
+            return jsonify({"error": "Missing date"}), 400
+
+        date_str = data['date']
+        machine_id = data.get('machine_id', 'W8210127')
+        deleted = memory.delete_by_date(date_str, machine_id=machine_id)
+
+        print(f"[CLEAR] Deleted {deleted} records for {date_str}")
+        return jsonify({"deleted": deleted, "date": date_str}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Clear history failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/history/dates', methods=['GET'])
 def get_history_dates():
