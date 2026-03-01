@@ -252,6 +252,85 @@ class GeminiService:
         return result
 
     # ──────────────────────────────────────────────
+    # TEXT → COMPONENT EXTRACTION (for upload descriptions)
+    # ──────────────────────────────────────────────
+
+    def extract_components_from_text(self, text: str, machine_type: str = 'cat_ta1') -> dict:
+        """
+        Given a plain-text description (from analyze-upload), extract any checklist
+        components mentioned. Returns a dict shaped like an audio transcription result
+        so the rest of the pipeline can treat it identically.
+        """
+        if machine_type == 'f1tenth':
+            items_list = (
+                "1.1 Chassis Frame & Body | 1.2 Wheels & Tires | "
+                "2.1 Jetson Xavier NX (Compute) | 2.2 LiDAR Unit | 2.3 Power Distribution Board"
+            )
+        else:
+            items_list = (
+                "1.1 Tires and Rims | 1.2 Bucket Cutting Edge, Tips, or Moldboard | "
+                "1.3 Bucket Tilt Cylinders and Hoses | 1.4 Bucket, Lift Cylinders and Hoses | "
+                "1.5 Lift arm attachment to frame | 1.6 Underneath of Machine | "
+                "1.7 Transmission and Transfer Gears | 1.8 Differential and Final Drive Oil | "
+                "1.9 Steps and Handrails | 1.10 Brake Air Tank; inspect | 1.11 Fuel Tank | "
+                "1.12 Axles- Final Drives, Differentials, Brakes, Duo-cone Seals | "
+                "1.13 Hydraulic fluid tank, inspect | 1.14 Transmission Oil | "
+                "1.15 Work Lights | 1.16 Battery & Cables | 2.1 Engine Oil Level | "
+                "2.2 Engine Coolant Level | 2.3 Check Radiator Cores for Debris | "
+                "2.4 Inspect Hoses for Cracks or Leaks | 2.5 Primary/secondary fuel filters | "
+                "2.6 All Belts | 2.7 Air Cleaner and Air Filter Service Indicator | "
+                "2.8 Overall Engine Compartment | 3.1 Steps & Handrails | 3.2 ROPS/FOPS | "
+                "3.3 Fire Extinguisher | 3.4 Windshield wipers and washers | 3.5 Side Doors | "
+                "4.1 Seat | 4.2 Seat belt and mounting | 4.3 Horn | 4.4 Backup Alarm | "
+                "4.5 Windows and Mirrors | 4.6 Cab Air Filter | 4.7 Indicators & Gauges | "
+                "4.8 Switch functionality | 4.9 Overall Cab Interior"
+            )
+
+        prompt = (
+            f"Extract every equipment component mentioned in this inspection description.\n"
+            f"Map each to the closest item from this checklist (use exact name):\n{items_list}\n\n"
+            f"Description: \"{text}\"\n\n"
+            f"Return JSON with components_mentioned as an array of {{name, timestamp}} objects "
+            f"where timestamp is 0 for all (text has no timestamps). "
+            f"If no checklist component is clearly mentioned, return an empty array."
+        )
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "components_mentioned": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "timestamp": {"type": "number"}
+                        },
+                        "required": ["name", "timestamp"]
+                    }
+                }
+            },
+            "required": ["components_mentioned"]
+        }
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=[prompt],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                    temperature=0.0,
+                )
+            )
+            result = json.loads(response.text)
+        except Exception:
+            result = {"components_mentioned": []}
+
+        result.setdefault("segments", [])
+        return result
+
+    # ──────────────────────────────────────────────
     # CROSS-REFERENCE (Visual vs Audio)
     # ──────────────────────────────────────────────
 

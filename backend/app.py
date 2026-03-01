@@ -160,6 +160,71 @@ def backfill_visual_component(cross_ref: dict, visual_analysis: dict, machine_ty
     return cross_ref
 
 
+# Negative/warning words used to infer grade from transcript text
+_NEGATIVE_WORDS = {
+    'fail', 'failed', 'failing', 'broken', 'cracked', 'crack', 'leak', 'leaking',
+    'leaks', 'loose', 'missing', 'damaged', 'damage', 'worn', 'wear', 'bad', 'issue',
+    'problem', 'replace', 'repair', 'low', 'empty', 'dead', 'flat', 'puncture',
+    'torn', 'ripped', 'bent', 'dent', 'rust', 'corrosion', 'seized', 'seized',
+    'error', 'warning', 'overheating', 'hot',
+}
+_WARNING_WORDS = {
+    'monitor', 'watch', 'check', 'inspect', 'marginal', 'concern', 'slight',
+    'minor', 'a bit', 'some', 'little', 'borderline', 'needs', 'soon',
+}
+
+
+def _grade_from_transcript(component_name: str, full_text: str) -> str:
+    """Infer a grade for a component based on transcript text sentiment near its mention."""
+    text_lower = full_text.lower()
+    comp_lower = component_name.lower()
+    idx = text_lower.find(comp_lower)
+    # Use a 120-char window around the mention; fall back to full text if not found
+    window = text_lower[max(0, idx - 120):idx + len(comp_lower) + 120] if idx >= 0 else text_lower
+    window_words = set(window.split())
+    if window_words & _NEGATIVE_WORDS:
+        return 'Yellow'  # conservative — flag for review rather than immediate fail
+    return 'Green'
+
+
+def backfill_audio_components(cross_ref: dict, audio_transcription: dict, machine_type: str) -> dict:
+    """
+    For every component mentioned in the audio transcript that isn't already
+    in items_evaluated, add it with a grade inferred from transcript sentiment.
+
+    This ensures that anything the operator spoke about appears in the report,
+    even if the AI cross-reference step didn't include it.
+    """
+    components_mentioned = audio_transcription.get('components_mentioned', [])
+    if not components_mentioned:
+        return cross_ref
+
+    full_text = audio_transcription.get('full_text', '')
+    valid_items = _F1TENTH_ITEMS if machine_type == 'f1tenth' else _CAT_ITEMS
+    existing = {item.get('checklist_mapped_item', '') for item in cross_ref.get('items_evaluated', [])}
+
+    for mention in components_mentioned:
+        name = mention.get('name', '').strip()
+        if not name:
+            continue
+
+        canonical = normalize_checklist_item(name, machine_type)
+        if canonical not in valid_items or canonical in existing:
+            continue
+
+        grade = _grade_from_transcript(name, full_text)
+        cross_ref.setdefault('items_evaluated', []).append({
+            'checklist_mapped_item': canonical,
+            'checklist_grade': grade,
+            'verdict_reasoning': f'Component mentioned in operator description/audio. {("Possible issue detected in transcript." if grade != "Green" else "No issues noted.")}',
+            'recommendation': '',
+        })
+        existing.add(canonical)
+        print(f"[AUDIO-BACKFILL] Added audio-mentioned '{canonical}' ({grade})")
+
+    return cross_ref
+
+
 # Lazy-initialize services
 _gemini_service = None
 
@@ -265,6 +330,7 @@ def analyze():
             cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history, machine_type=machine_type)
             normalize_items_evaluated(cross_ref, machine_type)
             backfill_visual_component(cross_ref, visual, machine_type)
+            backfill_audio_components(cross_ref, audio_transcription, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
@@ -677,6 +743,7 @@ def analyze_video():
             )
             normalize_items_evaluated(cross_ref, machine_type)
             backfill_visual_component(cross_ref, visual, machine_type)
+            backfill_audio_components(cross_ref, audio_transcription, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get(
                 "final_status", visual.get("preliminary_status", "UNCLEAR")
@@ -775,7 +842,7 @@ def analyze_upload():
 
         # Visual analysis
         try:
-            visual = gemini.analyze_frames(frames)
+            visual = gemini.analyze_frames(frames, machine_type=machine_type)
             result["visual_analysis"] = visual
             result["color_code"] = visual.get("color_code", "Fail")
         except Exception as e:
@@ -784,12 +851,9 @@ def analyze_upload():
             result["color_code"] = "Fail"
             visual = result["visual_analysis"]
 
-        # Synthetic audio transcription from text
-        audio_transcription = {
-            "full_text": description,
-            "segments": [],
-            "components_mentioned": [],
-        }
+        # Synthetic audio transcription from text — run through keyword extractor
+        audio_transcription = gemini.extract_components_from_text(description, machine_type=machine_type)
+        audio_transcription["full_text"] = description
         result["audio_transcription"] = audio_transcription
 
         # Cross-reference with history
@@ -798,9 +862,10 @@ def analyze_upload():
             history = memory.get_history(component_name) if component_name else []
             previous_inspection = history[0] if history else None
 
-            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history)
+            cross_ref = gemini.cross_reference(visual, audio_transcription, frames, history, machine_type=machine_type)
             normalize_items_evaluated(cross_ref, machine_type)
             backfill_visual_component(cross_ref, visual, machine_type)
+            backfill_audio_components(cross_ref, audio_transcription, machine_type)
             result["cross_reference"] = cross_ref
             result["final_status"] = cross_ref.get("final_status",
                 visual.get("preliminary_status", "UNCLEAR"))
